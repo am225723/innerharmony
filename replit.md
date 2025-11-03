@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 **IFS Educational Curriculum**: A 10-module professional course with 14 interactive protocol-based activities, tiered safety system, and trauma warnings.
 **AI-Powered Therapeutic Insights**: Perplexity API integration ("sonar" model) for real-time, trauma-informed IFS insights (journal reflection, parts pattern analysis, Q&A, unburdening visualizations, protector appreciation).
 **Real-Time Collaboration**: WebSocket-based system for therapist-client sessions, featuring room-based communication, persistent message/note storage, and event handling for real-time updates.
+**Multimedia Experience**: Comprehensive multimedia system including guided meditation audio with 3 player variants (default, compact, background), video player for IFS concept explanations with fullscreen support, wound visualizer with color-coded visual representations of 5 core childhood wounds using Lucide icons, and background music player with localStorage persistence for calming atmosphere during protocol work. Centralized media library accessible at /media-library with 4 tabs (Meditations, Videos, Music, Wound Map). Media players use event-driven state management for reliable playback control.
 
 ### Architectural Decisions
 
