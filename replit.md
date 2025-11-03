@@ -10,7 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (November 2025)
 
-### Comprehensive IFS Educational Curriculum (Latest - November 2025)
+### Real-Time Collaborative Session Infrastructure (Latest - November 3, 2025)
+**Complete WebSocket-based collaboration system:**
+- **WebSocket Server**: Room-based real-time communication integrated with Express on port 5000
+- **Database Schema**: Four new tables for collaboration (sessionMessages, sessionNotes, protocolWalkthroughs, sessionParticipants)
+- **Storage & API**: Complete backend with message/note CRUD operations and WebSocket event handling
+- **Session Isolation**: Each therapy session gets isolated WebSocket room for private therapist-client communication
+- **Event Types**: JOIN_SESSION, LEAVE_SESSION, MESSAGE, PARTS_UPDATE, PROTOCOL_UPDATE, NOTE_UPDATE
+- **Production Ready**: PostgreSQL persistence for all collaboration data with proper timestamps
+
+### Comprehensive IFS Educational Curriculum (November 2025)
 **Complete 10-Module Professional IFS Course:**
 - **Course Introduction**: Welcome to Your Inner World - Foundation concepts of multiplicity and parts
 - **Module 1**: The Foundations of Your Inner World - Understanding the IFS model
