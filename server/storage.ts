@@ -80,7 +80,7 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const user: User = { ...insertUser, id, createdAt: new Date() };
     this.users.set(id, user);
     return user;
   }
@@ -101,6 +101,7 @@ export class MemStorage implements IStorage {
       ...insertSession,
       id,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.sessions.set(id, session);
     return session;
@@ -130,6 +131,7 @@ export class MemStorage implements IStorage {
       ...insertActivity,
       id,
       createdAt: new Date(),
+      completedAt: null,
     };
     this.activities.set(id, activity);
     return activity;
@@ -156,6 +158,14 @@ export class MemStorage implements IStorage {
   async createPart(insertPart: InsertPart): Promise<Part> {
     const id = randomUUID();
     const part: Part = {
+      sessionId: null,
+      description: null,
+      emotions: null,
+      bodyLocation: null,
+      color: null,
+      age: null,
+      positionX: null,
+      positionY: null,
       ...insertPart,
       id,
       createdAt: new Date(),
@@ -189,6 +199,9 @@ export class MemStorage implements IStorage {
   async createJournalEntry(insertEntry: InsertJournalEntry): Promise<JournalEntry> {
     const id = randomUUID();
     const entry: JournalEntry = {
+      sessionId: null,
+      partId: null,
+      step: null,
       ...insertEntry,
       id,
       createdAt: new Date(),
@@ -214,6 +227,11 @@ export class MemStorage implements IStorage {
   async createAIInsight(insertInsight: InsertAIInsight): Promise<AIInsight> {
     const id = randomUUID();
     const insight: AIInsight = {
+      sessionId: null,
+      partId: null,
+      journalEntryId: null,
+      citations: null,
+      saved: null,
       ...insertInsight,
       id,
       createdAt: new Date(),
@@ -231,6 +249,8 @@ export class MemStorage implements IStorage {
   async createMedia(insertMedia: InsertMedia): Promise<Media> {
     const id = randomUUID();
     const mediaItem: Media = {
+      sessionId: null,
+      metadata: {},
       ...insertMedia,
       id,
       createdAt: new Date(),
@@ -240,4 +260,208 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { eq } from "drizzle-orm";
+import * as schema from "@shared/schema";
+import ws from "ws";
+
+// Configure WebSocket for Neon serverless
+neonConfig.webSocketConstructor = ws;
+
+export class DatabaseStorage implements IStorage {
+  private db;
+
+  constructor() {
+    const connectionString = process.env.DATABASE_URL!;
+    const pool = new Pool({ connectionString });
+    this.db = drizzle(pool, { schema });
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, id),
+    });
+    return result;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.query.users.findFirst({
+      where: eq(schema.users.username, username),
+    });
+    return result;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await this.db
+      .insert(schema.users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getSessionsByUserId(userId: string): Promise<Session[]> {
+    const results = await this.db.query.sessions.findMany({
+      where: (sessions, { or, eq }) =>
+        or(eq(sessions.therapistId, userId), eq(sessions.clientId, userId)),
+    });
+    return results;
+  }
+
+  async getSession(id: string): Promise<Session | undefined> {
+    const result = await this.db.query.sessions.findFirst({
+      where: eq(schema.sessions.id, id),
+    });
+    return result;
+  }
+
+  async createSession(insertSession: InsertSession): Promise<Session> {
+    const [session] = await this.db
+      .insert(schema.sessions)
+      .values(insertSession)
+      .returning();
+    return session;
+  }
+
+  async updateSession(id: string, updates: Partial<Session>): Promise<Session | undefined> {
+    const [updated] = await this.db
+      .update(schema.sessions)
+      .set(updates)
+      .where(eq(schema.sessions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getActivitiesByUserId(userId: string): Promise<Activity[]> {
+    const results = await this.db.query.activities.findMany({
+      where: eq(schema.activities.userId, userId),
+    });
+    return results;
+  }
+
+  async getActivity(id: string): Promise<Activity | undefined> {
+    const result = await this.db.query.activities.findFirst({
+      where: eq(schema.activities.id, id),
+    });
+    return result;
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await this.db
+      .insert(schema.activities)
+      .values(insertActivity)
+      .returning();
+    return activity;
+  }
+
+  async updateActivity(id: string, updates: Partial<Activity>): Promise<Activity | undefined> {
+    const [updated] = await this.db
+      .update(schema.activities)
+      .set(updates)
+      .where(eq(schema.activities.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getPartsByUserId(userId: string): Promise<Part[]> {
+    const results = await this.db.query.parts.findMany({
+      where: eq(schema.parts.userId, userId),
+    });
+    return results;
+  }
+
+  async getPart(id: string): Promise<Part | undefined> {
+    const result = await this.db.query.parts.findFirst({
+      where: eq(schema.parts.id, id),
+    });
+    return result;
+  }
+
+  async createPart(insertPart: InsertPart): Promise<Part> {
+    const [part] = await this.db
+      .insert(schema.parts)
+      .values(insertPart)
+      .returning();
+    return part;
+  }
+
+  async updatePart(id: string, updates: Partial<Part>): Promise<Part | undefined> {
+    const [updated] = await this.db
+      .update(schema.parts)
+      .set(updates)
+      .where(eq(schema.parts.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePart(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.parts)
+      .where(eq(schema.parts.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getJournalEntriesByUserId(userId: string): Promise<JournalEntry[]> {
+    const results = await this.db.query.journalEntries.findMany({
+      where: eq(schema.journalEntries.userId, userId),
+    });
+    return results;
+  }
+
+  async getJournalEntry(id: string): Promise<JournalEntry | undefined> {
+    const result = await this.db.query.journalEntries.findFirst({
+      where: eq(schema.journalEntries.id, id),
+    });
+    return result;
+  }
+
+  async createJournalEntry(insertEntry: InsertJournalEntry): Promise<JournalEntry> {
+    const [entry] = await this.db
+      .insert(schema.journalEntries)
+      .values(insertEntry)
+      .returning();
+    return entry;
+  }
+
+  async updateJournalEntry(id: string, updates: Partial<JournalEntry>): Promise<JournalEntry | undefined> {
+    const [updated] = await this.db
+      .update(schema.journalEntries)
+      .set(updates)
+      .where(eq(schema.journalEntries.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAIInsightsByUserId(userId: string): Promise<AIInsight[]> {
+    const results = await this.db.query.aiInsights.findMany({
+      where: eq(schema.aiInsights.userId, userId),
+    });
+    return results;
+  }
+
+  async createAIInsight(insertInsight: InsertAIInsight): Promise<AIInsight> {
+    const [insight] = await this.db
+      .insert(schema.aiInsights)
+      .values(insertInsight)
+      .returning();
+    return insight;
+  }
+
+  async getMediaByUserId(userId: string): Promise<Media[]> {
+    const results = await this.db.query.media.findMany({
+      where: eq(schema.media.userId, userId),
+    });
+    return results;
+  }
+
+  async createMedia(insertMedia: InsertMedia): Promise<Media> {
+    const [mediaItem] = await this.db
+      .insert(schema.media)
+      .values(insertMedia)
+      .returning();
+    return mediaItem;
+  }
+}
+
+export const storage = new DatabaseStorage();
