@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { AIInsights } from "@/components/AIInsights";
 import {
   Activity,
   BookOpen,
@@ -314,80 +315,8 @@ export function DashboardOverview({
           </CardContent>
         </Card>
 
-        {/* AI Insights Panel */}
-        <Card data-testid="card-ai-insights-panel">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="font-display flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  AI Insights
-                </CardTitle>
-                <CardDescription>Personalized IFS guidance for your journey</CardDescription>
-              </div>
-              <Button
-                onClick={() => generateInsightMutation.mutate()}
-                disabled={generateInsightMutation.isPending}
-                size="sm"
-                data-testid="button-generate-insight"
-              >
-                {generateInsightMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    New Insight
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {aiInsights.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                  <Brain className="w-8 h-8 text-primary" />
-                </div>
-                <h3 className="font-medium mb-1">No insights yet</h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  Complete some activities to receive personalized IFS guidance from AI
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {aiInsights.slice(0, 3).map((insight) => (
-                  <div
-                    key={insight.id}
-                    className="p-4 rounded-lg bg-primary/5 border border-primary/20"
-                    data-testid={`insight-${insight.id}`}
-                  >
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {insight.type === "personalized_guidance" ? "Guidance" : "Insight"}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(insight.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {insight.insight}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* AI Q&A Panel */}
+        <AIInsights variant="ask-question" userId={user.id} />
       </div>
 
       {/* Sessions Section for Therapists */}

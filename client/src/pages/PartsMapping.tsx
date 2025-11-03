@@ -3,13 +3,17 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { PartsCanvas } from "@/components/parts/PartsCanvas";
+import { AIInsights } from "@/components/AIInsights";
 import { type User, type Part } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 export default function PartsMapping() {
   const [, setLocation] = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -90,12 +94,46 @@ export default function PartsMapping() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} onLogout={handleLogout} />
-      <PartsCanvas
-        parts={parts}
-        onAddPart={(part) => addPartMutation.mutate(part)}
-        onUpdatePart={(id, updates) => updatePartMutation.mutate({ id, updates })}
-        onDeletePart={(id) => deletePartMutation.mutate(id)}
-      />
+      <div className="flex h-[calc(100vh-4rem)]">
+        <div className="flex-1 overflow-hidden">
+          <PartsCanvas
+            parts={parts}
+            onAddPart={(part) => addPartMutation.mutate(part)}
+            onUpdatePart={(id, updates) => updatePartMutation.mutate({ id, updates })}
+            onDeletePart={(id) => deletePartMutation.mutate(id)}
+          />
+        </div>
+        
+        {/* AI Insights Sidebar */}
+        {showInsights ? (
+          <div className="w-96 border-l bg-card p-6 overflow-y-auto">
+            <div className="space-y-4">
+              <AIInsights variant="parts-analysis" userId={user.id} />
+              <AIInsights variant="ask-question" userId={user.id} />
+              <Button
+                variant="outline"
+                onClick={() => setShowInsights(false)}
+                className="w-full"
+                data-testid="button-hide-insights"
+              >
+                Hide Insights
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="absolute bottom-4 right-4 z-10">
+            <Button
+              onClick={() => setShowInsights(true)}
+              size="lg"
+              className="shadow-lg"
+              data-testid="button-show-insights"
+            >
+              <Sparkles className="mr-2 h-5 w-5" />
+              AI Insights
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
