@@ -6,12 +6,11 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: "0.75rem", /* 12px - therapeutic rounded corners */
+        md: "0.5rem", /* 8px */
+        sm: "0.25rem", /* 4px */
       },
       colors: {
-        // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
@@ -51,6 +50,10 @@ export default {
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
           border: "var(--destructive-border)",
         },
+        success: {
+          DEFAULT: "hsl(var(--success) / <alpha-value>)",
+          foreground: "hsl(var(--success-foreground) / <alpha-value>)",
+        },
         ring: "hsl(var(--ring) / <alpha-value>)",
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
@@ -86,6 +89,11 @@ export default {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        display: ["var(--font-display)"],
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
       },
       keyframes: {
         "accordion-down": {
@@ -96,10 +104,25 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "slide-up": {
+          from: { transform: "translateY(10px)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.3s ease-in-out",
+        "slide-up": "slide-up 0.3s ease-out",
+        "pulse-soft": "pulse-soft 2s ease-in-out infinite",
       },
     },
   },

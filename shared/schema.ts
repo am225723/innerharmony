@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,12 +7,147 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role", { enum: ["therapist", "client"] }).notNull().default("client"),
+  displayName: text("display_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const sessions = pgTable("sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  therapistId: varchar("therapist_id").notNull(),
+  clientId: varchar("client_id").notNull(),
+  title: text("title").notNull(),
+  status: text("status", { enum: ["scheduled", "active", "completed", "cancelled"] }).notNull().default("scheduled"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export const parts = pgTable("parts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  type: text("type", { enum: ["manager", "firefighter", "exile"] }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  emotions: text("emotions").array(),
+  bodyLocation: text("body_location"),
+  color: text("color"),
+  age: text("age"),
+  positionX: text("position_x"),
+  positionY: text("position_y"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const journalEntries = pgTable("journal_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  partId: varchar("part_id"),
+  protocol: text("protocol", { enum: ["six_fs", "witnessing", "unburdening", "letter", "free"] }).notNull(),
+  step: text("step"),
+  content: text("content").notNull(),
+  responses: jsonb("responses"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  type: text("type", { enum: ["parts_mapping", "six_fs", "meditation", "witnessing", "unburdening", "letter_writing", "body_mapping", "creative_expression"] }).notNull(),
+  title: text("title").notNull(),
+  status: text("status", { enum: ["not_started", "in_progress", "completed"] }).notNull().default("not_started"),
+  data: jsonb("data"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const aiInsights = pgTable("ai_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  partId: varchar("part_id"),
+  journalEntryId: varchar("journal_entry_id"),
+  context: text("context").notNull(),
+  insight: text("insight").notNull(),
+  citations: text("citations").array(),
+  saved: boolean("saved").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const media = pgTable("media", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  sessionId: varchar("session_id"),
+  type: text("type", { enum: ["image", "audio", "video"] }).notNull(),
+  url: text("url").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSessionSchema = createInsertSchema(sessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPartSchema = createInsertSchema(parts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+export const insertAIInsightSchema = createInsertSchema(aiInsights).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Login schema
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export const loginCredentialsSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+  role: z.enum(["therapist", "client"]),
+});
+
+// Types
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = z.infer<typeof insertSessionSchema>;
+export type Part = typeof parts.$inferSelect;
+export type InsertPart = z.infer<typeof insertPartSchema>;
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type AIInsight = typeof aiInsights.$inferSelect;
+export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
+export type Media = typeof media.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;
+export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
