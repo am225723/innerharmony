@@ -265,6 +265,22 @@ export function DashboardOverview({
               </Button>
             </Link>
 
+            <Link href="/lessons">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-auto p-4 gap-3"
+                data-testid="button-lessons"
+              >
+                <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-5 h-5 text-teal-600" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium">Learning Library</p>
+                  <p className="text-xs text-muted-foreground">Educational lessons about IFS</p>
+                </div>
+              </Button>
+            </Link>
+
             <Button
               variant="outline"
               className="w-full justify-start h-auto p-4 gap-3"

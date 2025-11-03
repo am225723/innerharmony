@@ -11,6 +11,8 @@ import ClientProfile from "@/pages/ClientProfile";
 import PartsMapping from "@/pages/PartsMapping";
 import SixFs from "@/pages/SixFs";
 import LetterWrite from "@/pages/LetterWrite";
+import Lessons from "@/pages/Lessons";
+import LessonView from "@/pages/LessonView";
 import NotFound from "@/pages/not-found";
 
 function RoleBasedDashboard() {
@@ -47,6 +49,8 @@ function Router() {
       <Route path="/parts-mapping" component={PartsMapping} />
       <Route path="/six-fs" component={SixFs} />
       <Route path="/letter" component={LetterWrite} />
+      <Route path="/lessons" component={Lessons} />
+      <Route path="/lessons/:id" component={LessonView} />
       <Route component={NotFound} />
     </Switch>
   );
