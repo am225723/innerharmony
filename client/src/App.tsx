@@ -13,6 +13,7 @@ import SixFs from "@/pages/SixFs";
 import LetterWrite from "@/pages/LetterWrite";
 import Lessons from "@/pages/Lessons";
 import LessonView from "@/pages/LessonView";
+import SharedSessionWorkspace from "@/pages/SharedSessionWorkspace";
 import NotFound from "@/pages/not-found";
 
 function RoleBasedDashboard() {
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/letter" component={LetterWrite} />
       <Route path="/lessons" component={Lessons} />
       <Route path="/lessons/:id" component={LessonView} />
+      <Route path="/session/:sessionId" component={SharedSessionWorkspace} />
       <Route component={NotFound} />
     </Switch>
   );
