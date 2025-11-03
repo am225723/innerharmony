@@ -89,10 +89,13 @@ export const lessons = pgTable("lessons", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  category: text("category", { enum: ["introduction", "understanding_parts", "self_leadership", "unburdening", "advanced"] }).notNull(),
+  category: text("category", { enum: ["introduction", "understanding_parts", "self_leadership", "unburdening", "advanced", "protocols", "healing", "integration"] }).notNull(),
+  track: text("track", { enum: ["foundations", "deepening", "therapeutic"] }).notNull().default("foundations"),
   order: text("order").notNull(),
   content: jsonb("content").notNull(),
   estimatedMinutes: text("estimated_minutes"),
+  safetyLevel: text("safety_level", { enum: ["gentle", "moderate", "intensive"] }).default("gentle"),
+  traumaWarning: boolean("trauma_warning").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -101,9 +104,11 @@ export const lessonActivities = pgTable("lesson_activities", {
   lessonId: varchar("lesson_id").notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  type: text("type", { enum: ["reflection", "journaling", "parts_work", "meditation", "exercise"] }).notNull(),
+  type: text("type", { enum: ["reflection", "journaling", "parts_work", "meditation", "exercise", "protocol", "assessment", "grounding"] }).notNull(),
   order: text("order").notNull(),
   content: jsonb("content").notNull(),
+  isProtocol: boolean("is_protocol").default(false),
+  requiresSafetyCheck: boolean("requires_safety_check").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -116,6 +121,47 @@ export const lessonProgress = pgTable("lesson_progress", {
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const protocolSteps = pgTable("protocol_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  activityId: varchar("activity_id").notNull(),
+  lessonActivityId: varchar("lesson_activity_id"),
+  protocolType: text("protocol_type", { enum: ["six_fs", "unburdening", "reparenting", "grounding", "self_assessment"] }).notNull(),
+  stepNumber: text("step_number").notNull(),
+  stepName: text("step_name").notNull(),
+  completed: boolean("completed").default(false),
+  response: text("response"),
+  safetyCheckPassed: boolean("safety_check_passed"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const woundProfiles = pgTable("wound_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  partId: varchar("part_id"),
+  woundType: text("wound_type", { enum: ["rejection", "abandonment", "injustice", "betrayal", "neglect"] }).notNull(),
+  description: text("description"),
+  originStory: text("origin_story"),
+  coreBeliefs: text("core_beliefs").array(),
+  triggers: text("triggers").array(),
+  protectorStrategies: text("protector_strategies").array(),
+  healingProgress: text("healing_progress", { enum: ["identified", "exploring", "healing", "integrated"] }).default("identified"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const selfAssessments = pgTable("self_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  assessmentType: text("assessment_type", { enum: ["eight_cs", "parts_check", "safety_check", "grounding_check"] }).notNull(),
+  scores: jsonb("scores").notNull(),
+  inSelf: boolean("in_self"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Insert schemas
@@ -173,6 +219,23 @@ export const insertLessonProgressSchema = createInsertSchema(lessonProgress).omi
   completedAt: true,
 });
 
+export const insertProtocolStepSchema = createInsertSchema(protocolSteps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWoundProfileSchema = createInsertSchema(woundProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSelfAssessmentSchema = createInsertSchema(selfAssessments).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -206,4 +269,10 @@ export type LessonActivity = typeof lessonActivities.$inferSelect;
 export type InsertLessonActivity = z.infer<typeof insertLessonActivitySchema>;
 export type LessonProgress = typeof lessonProgress.$inferSelect;
 export type InsertLessonProgress = z.infer<typeof insertLessonProgressSchema>;
+export type ProtocolStep = typeof protocolSteps.$inferSelect;
+export type InsertProtocolStep = z.infer<typeof insertProtocolStepSchema>;
+export type WoundProfile = typeof woundProfiles.$inferSelect;
+export type InsertWoundProfile = z.infer<typeof insertWoundProfileSchema>;
+export type SelfAssessment = typeof selfAssessments.$inferSelect;
+export type InsertSelfAssessment = z.infer<typeof insertSelfAssessmentSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
