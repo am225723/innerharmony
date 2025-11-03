@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
-import { type User, type Session, type Activity } from "@shared/schema";
+import { type User, type Session, type Activity, type AIInsight } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -28,6 +28,11 @@ export default function Dashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: aiInsights = [], isLoading: insightsLoading } = useQuery<AIInsight[]>({
+    queryKey: [`/api/ai-insights?userId=${user?.id}`],
+    enabled: !!user?.id,
+  });
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     setLocation("/login");
@@ -35,7 +40,7 @@ export default function Dashboard() {
 
   if (!user) return null;
 
-  if (sessionsLoading || activitiesLoading) {
+  if (sessionsLoading || activitiesLoading || insightsLoading) {
     return (
       <div className="min-h-screen bg-background">
         <AppHeader user={user} onLogout={handleLogout} />
@@ -56,6 +61,7 @@ export default function Dashboard() {
         user={user}
         sessions={sessions}
         activities={activities}
+        aiInsights={aiInsights}
       />
     </div>
   );

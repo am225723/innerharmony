@@ -8,6 +8,25 @@ Compassionate Path is a web-based therapeutic platform designed to facilitate In
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates (November 2025)
+
+### Database Migration Completed
+- Migrated from in-memory storage to PostgreSQL with Drizzle ORM
+- Neon Serverless driver configured with WebSocket support
+- All data now persists across sessions (users, parts, journal entries, activities, AI insights)
+
+### Progress Tracking System Implemented
+- Automatic activity creation when users complete therapeutic exercises
+- Activities scoped by userId and sessionId to support multi-session workflows
+- Dashboard displays real-time progress metrics from database
+- Activity types: parts_mapping (in-progress), six_fs, letter_writing, witnessing, unburdening (completed)
+
+### Current Status
+- Core MVP features functional: Login, Parts Mapping, 6 F's Protocol, Letter Writing
+- Database persistence working with all API routes
+- Dashboard shows real activity completion data
+- AI insights infrastructure ready (Perplexity integration pending)
+
 ## System Architecture
 
 ### Frontend Architecture

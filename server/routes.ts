@@ -179,6 +179,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const partData = insertPartSchema.parse(req.body);
       const part = await storage.createPart(partData);
+      
+      // Create or update Parts Mapping activity (scoped by sessionId if present)
+      const existingActivities = await storage.getActivitiesByUserId(partData.userId);
+      const partsActivity = existingActivities.find(
+        a => a.type === "parts_mapping" && 
+             a.status !== "completed" &&
+             (partData.sessionId ? a.sessionId === partData.sessionId : a.sessionId === null)
+      );
+      
+      if (!partsActivity) {
+        // Create new in-progress activity for Parts Mapping
+        await storage.createActivity({
+          userId: partData.userId,
+          sessionId: partData.sessionId || null,
+          type: "parts_mapping",
+          title: "Parts Mapping",
+          description: "Visualizing internal parts system",
+          status: "in_progress",
+          data: {},
+        });
+      }
+      
       res.status(201).json(part);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -243,6 +265,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const entryData = insertJournalEntrySchema.parse(req.body);
       const entry = await storage.createJournalEntry(entryData);
+      
+      // Create or update activity record for this protocol
+      const activityType = entryData.protocol === "six_fs" ? "six_fs" : 
+                          entryData.protocol === "letter" ? "letter_writing" :
+                          entryData.protocol === "witnessing" ? "witnessing" :
+                          entryData.protocol === "unburdening" ? "unburdening" :
+                          entryData.protocol;
+      
+      const activityTitle = activityType === "six_fs" ? "6 F's Protocol" :
+                           activityType === "letter_writing" ? "Letter to Inner Child" :
+                           activityType === "witnessing" ? "Witnessing Protocol" :
+                           activityType === "unburdening" ? "Unburdening Ceremony" :
+                           "Journal Entry";
+      
+      // Check if activity already exists for this user/type/session
+      const existingActivities = await storage.getActivitiesByUserId(entryData.userId);
+      const existingActivity = existingActivities.find(
+        a => a.type === activityType && 
+             a.status !== "completed" &&
+             (entryData.sessionId ? a.sessionId === entryData.sessionId : a.sessionId === null)
+      );
+      
+      if (existingActivity) {
+        // Update existing activity to completed
+        await storage.updateActivity(existingActivity.id, {
+          status: "completed",
+          completedAt: new Date(),
+          data: { journalEntryId: entry.id },
+        });
+      } else {
+        // Create new completed activity
+        await storage.createActivity({
+          userId: entryData.userId,
+          sessionId: entryData.sessionId || null,
+          type: activityType as any,
+          title: activityTitle,
+          description: `Completed ${activityTitle}`,
+          status: "completed",
+          data: { journalEntryId: entry.id },
+        });
+      }
+      
       res.status(201).json(entry);
     } catch (error) {
       if (error instanceof z.ZodError) {

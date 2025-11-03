@@ -16,12 +16,13 @@ import {
   Shield,
   Plus,
 } from "lucide-react";
-import { type User, type Session as SessionType, type Activity as ActivityType } from "@shared/schema";
+import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
 
 interface DashboardOverviewProps {
   user: User;
   sessions: SessionType[];
   activities: ActivityType[];
+  aiInsights?: AIInsight[];
   onCreateSession?: () => void;
   onViewActivity?: (activityId: string) => void;
 }
@@ -30,6 +31,7 @@ export function DashboardOverview({
   user,
   sessions,
   activities,
+  aiInsights = [],
   onCreateSession,
   onViewActivity,
 }: DashboardOverviewProps) {
@@ -108,9 +110,9 @@ export function DashboardOverview({
             <Sparkles className="w-4 h-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-display font-semibold">12</div>
+            <div className="text-3xl font-display font-semibold">{aiInsights.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Personalized guidance available
+              {aiInsights.length === 0 ? "No insights yet" : "Personalized guidance available"}
             </p>
           </CardContent>
         </Card>
