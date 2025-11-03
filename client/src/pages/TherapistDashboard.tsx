@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Users, Calendar, Activity, Plus, UserCheck, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Users, Calendar, Activity, Plus, UserCheck, Clock, CheckCircle2, XCircle, ChevronRight } from "lucide-react";
 import type { User, Session } from "@shared/schema";
 
 export default function TherapistDashboard() {
@@ -245,21 +245,25 @@ export default function TherapistDashboard() {
                   {clients.slice(0, 5).map((client) => {
                     const clientSessions = sessions.filter(s => s.clientId === client.id);
                     return (
-                      <div
-                        key={client.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover-elevate active-elevate-2"
-                        data-testid={`client-${client.id}`}
-                      >
-                        <div>
-                          <p className="font-medium">{client.displayName}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            @{client.username}
-                          </p>
+                      <Link key={client.id} href={`/clients/${client.id}`}>
+                        <div
+                          className="flex items-center justify-between p-4 rounded-lg border hover-elevate active-elevate-2 cursor-pointer"
+                          data-testid={`client-${client.id}`}
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium">{client.displayName}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              @{client.username}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" data-testid={`badge-client-sessions-${client.id}`}>
+                              {clientSessions.length} sessions
+                            </Badge>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          </div>
                         </div>
-                        <Badge variant="outline" data-testid={`badge-client-sessions-${client.id}`}>
-                          {clientSessions.length} sessions
-                        </Badge>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

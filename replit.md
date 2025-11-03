@@ -32,8 +32,9 @@ Preferred communication style: Simple, everyday language.
 
 ### Current Status
 - Dual authentication: Therapist and Client dashboards with role-based routing
-- Therapist features: Session management, client directory, dashboard analytics
+- Therapist features: Session management, client directory, client profiles, dashboard analytics
 - Client features: Parts Mapping, 6 F's Protocol, Letter Writing, personal dashboard
+- Client Management: Therapists can view detailed client profiles with parts, journal entries, activities, and session history
 - Database persistence working with all API routes
 - AI insights infrastructure ready (Perplexity "sonar" model configured)
 
@@ -129,11 +130,22 @@ Preferred communication style: Simple, everyday language.
 
 **Current Model**: Simple credential-based login with username/password. Auto-creates users on first login attempt. No password hashing or session tokens implemented - this is a prototype/development authentication system.
 
-**Role System**: Two-role model (therapist/client) with full role-based access control:
-- Therapists: Access to TherapistDashboard, session management, client directory, protected /api/users endpoint
+**Role System**: Two-role model (therapist/client) with role-based access control:
+- Therapists: Access to TherapistDashboard, session management, client directory, client profiles
 - Clients: Access to personal Dashboard, therapeutic activities (Parts Mapping, 6 F's, Letter Writing)
 - RoleBasedDashboard component routes users to appropriate interface based on role
 - Corrupted localStorage handled gracefully with automatic cleanup and redirect to login
+
+**Protected Endpoints**:
+- `GET /api/users` - Therapist-only (validates requesting user role)
+- `GET /api/users/:id` - Therapist-only (validates requesting user role)
+
+**Security Limitations** (MVP/Prototype):
+- No therapist-client relationship tracking in database
+- Parts/journal/activities endpoints accessible with userId (client-owned data)
+- No session tokens or JWT authentication
+- Passwords stored in plain text
+- No audit logging of data access
 
 **Session Persistence**: User object stored in localStorage after successful login, retrieved on protected route access. React Query configured with aggressive refetching (staleTime: 0, refetchOnMount: "always") to ensure fresh data after login/logout cycles.
 

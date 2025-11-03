@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import TherapistDashboard from "@/pages/TherapistDashboard";
+import ClientProfile from "@/pages/ClientProfile";
 import PartsMapping from "@/pages/PartsMapping";
 import SixFs from "@/pages/SixFs";
 import LetterWrite from "@/pages/LetterWrite";
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/" component={() => <Redirect to="/login" />} />
       <Route path="/login" component={Login} />
       <Route path="/dashboard" component={RoleBasedDashboard} />
+      <Route path="/clients/:clientId" component={ClientProfile} />
       <Route path="/parts-mapping" component={PartsMapping} />
       <Route path="/six-fs" component={SixFs} />
       <Route path="/letter" component={LetterWrite} />

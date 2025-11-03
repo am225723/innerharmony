@@ -66,6 +66,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:id", async (req: Request, res: Response) => {
+    try {
+      const requestingUserId = req.query.requestingUserId as string | undefined;
+      
+      if (!requestingUserId) {
+        return res.status(401).json({ error: "Unauthorized - requesting user required" });
+      }
+      
+      const requestingUser = await storage.getUser(requestingUserId);
+      if (!requestingUser || requestingUser.role !== "therapist") {
+        return res.status(403).json({ error: "Forbidden - therapist access only" });
+      }
+      
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ ...user, password: undefined });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Session Routes
   app.get("/api/sessions", async (req: Request, res: Response) => {
     try {
