@@ -162,6 +162,145 @@ export default function LessonView() {
 
   const content = lesson.content as any;
   const sections = content?.sections || [];
+  const introduction = content?.introduction;
+
+  const renderSectionContent = (section: any) => {
+    return (
+      <div className="prose dark:prose-invert max-w-none space-y-4">
+        {section.content && <p className="text-foreground leading-relaxed">{section.content}</p>}
+        {section.description && <p className="text-muted-foreground leading-relaxed">{section.description}</p>}
+        
+        {section.keyPoints && (
+          <div className="bg-accent/30 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2 text-foreground">Key Points:</h4>
+            <ul className="list-disc pl-6 space-y-1">
+              {section.keyPoints.map((point: string, i: number) => (
+                <li key={i} className="text-foreground">{point}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {section.qualities && (
+          <div className="space-y-3">
+            {section.qualities.map((quality: any, i: number) => (
+              <div key={i} className="border-l-2 border-primary pl-4 py-2">
+                <h5 className="font-semibold text-foreground">{quality.name}</h5>
+                <p className="text-foreground mt-1">{quality.description}</p>
+                {quality.inPractice && (
+                  <p className="text-sm text-muted-foreground mt-1 italic">In practice: {quality.inPractice}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section.examples && (
+          <div className="space-y-2">
+            {section.examples.map((example: any, i: number) => (
+              <div key={i} className="bg-muted/50 p-3 rounded">
+                {example.response && <p className="font-medium text-foreground">{example.response}</p>}
+                {example.meaning && <p className="text-sm text-muted-foreground mt-1">→ {example.meaning}</p>}
+                {example.example && <p className="text-foreground mt-1">{example.example}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {section.protocol && (
+          <div className="bg-accent/50 p-4 rounded-lg">
+            <h4 className="font-semibold mb-2 text-foreground">Protocol:</h4>
+            {typeof section.protocol === 'string' ? (
+              <p className="text-foreground">{section.protocol}</p>
+            ) : section.protocol.step1 ? (
+              <div className="mt-3 space-y-3">
+                {Object.entries(section.protocol).map(([key, value]: [string, any]) => (
+                  <div key={key} className="border-l-2 border-primary/50 pl-3">
+                    <h5 className="font-semibold text-foreground">{value.name}</h5>
+                    <p className="text-sm text-foreground mt-1">{value.instruction}</p>
+                    {value.process && (
+                      <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                        {value.process.map((item: string, i: number) => (
+                          <li key={i} className="text-foreground">{item}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {value.questions && (
+                      <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                        {value.questions.map((q: string, i: number) => (
+                          <li key={i} className="text-foreground">{q}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {value.example && <p className="text-sm text-muted-foreground mt-2 italic">Example: {value.example}</p>}
+                    {value.keyInsight && <p className="text-sm text-primary mt-2">{value.keyInsight}</p>}
+                    {value.safetyNote && (
+                      <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">{value.safetyNote}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {section.reparenting && (
+          <div className="grid md:grid-cols-2 gap-4">
+            {section.reparenting.whatExilesNeeded && (
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2 text-foreground">What Exiles Needed:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {section.reparenting.whatExilesNeeded.map((item: string, i: number) => (
+                    <li key={i} className="text-foreground">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {section.reparenting.whatSelfProvides && (
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2 text-foreground">What Self Provides:</h4>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {section.reparenting.whatSelfProvides.map((item: string, i: number) => (
+                    <li key={i} className="text-foreground">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {section.criticalInsight && (
+          <div className="bg-primary/10 border-l-4 border-primary p-4 rounded">
+            <p className="font-medium text-foreground">{section.criticalInsight}</p>
+          </div>
+        )}
+
+        {section.safetyPrinciple && (
+          <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded">
+            <p className="font-medium text-foreground">{section.safetyPrinciple}</p>
+          </div>
+        )}
+
+        {section.quote && (
+          <blockquote className="border-l-4 border-primary pl-4 italic text-lg text-foreground">
+            {section.quote}
+          </blockquote>
+        )}
+
+        {section.paragraphs && section.paragraphs.map((p: string, i: number) => (
+          <p key={i} className="text-foreground">{p}</p>
+        ))}
+
+        {section.bulletPoints && (
+          <ul className="list-disc pl-6 space-y-1">
+            {section.bulletPoints.map((point: string, i: number) => (
+              <li key={i} className="text-foreground">{point}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -187,10 +326,21 @@ export default function LessonView() {
               <BookOpen className="w-8 h-8 text-muted-foreground" />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {lesson.category && (
+                <Badge variant="outline">{lesson.category.replace(/_/g, ' ')}</Badge>
+              )}
+              {lesson.track && (
+                <Badge variant="outline">{lesson.track}</Badge>
+              )}
               {lesson.estimatedMinutes && (
                 <Badge variant="outline" className="gap-1">
                   <Clock className="w-3 h-3" />
                   {lesson.estimatedMinutes} min
+                </Badge>
+              )}
+              {lesson.traumaWarning && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20">
+                  Trauma Warning
                 </Badge>
               )}
               {progress?.status === "completed" && (
@@ -208,24 +358,21 @@ export default function LessonView() {
           </CardHeader>
         </Card>
 
+        {introduction && (
+          <Card className="mb-6 bg-primary/5">
+            <CardContent className="pt-6">
+              <p className="text-foreground leading-relaxed">{introduction}</p>
+            </CardContent>
+          </Card>
+        )}
+
         {sections.map((section: any, index: number) => (
           <Card key={index} className="mb-6">
             <CardHeader>
               <CardTitle className="text-xl">{section.title}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose dark:prose-invert max-w-none">
-                {section.paragraphs?.map((paragraph: string, pIndex: number) => (
-                  <p key={pIndex} className="mb-4 text-foreground">{paragraph}</p>
-                ))}
-                {section.bulletPoints && (
-                  <ul className="list-disc pl-6 space-y-2">
-                    {section.bulletPoints.map((point: string, bIndex: number) => (
-                      <li key={bIndex} className="text-foreground">{point}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              {renderSectionContent(section)}
             </CardContent>
           </Card>
         ))}
