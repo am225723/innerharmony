@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -22,11 +22,24 @@ export default function LessonView() {
   const [, params] = useRoute("/lessons/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const lessonId = params?.id;
-
+  const [user, setUser] = useState<any>(null);
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [activityResponses, setActivityResponses] = useState<Record<string, string>>({});
+  const lessonId = params?.id;
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      setLocation("/login");
+    }
+  }, [setLocation]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setLocation("/login");
+  };
 
   const { data: lesson, isLoading: lessonLoading } = useQuery<Lesson>({
     queryKey: ["/api/lessons", lessonId],
@@ -35,7 +48,7 @@ export default function LessonView() {
       if (!response.ok) throw new Error("Failed to fetch lesson");
       return response.json();
     },
-    enabled: !!lessonId,
+    enabled: !!lessonId && !!user,
   });
 
   const { data: activities = [] } = useQuery<LessonActivity[]>({
@@ -45,25 +58,25 @@ export default function LessonView() {
       if (!response.ok) throw new Error("Failed to fetch activities");
       return response.json();
     },
-    enabled: !!lessonId,
+    enabled: !!lessonId && !!user,
   });
 
   const { data: progress } = useQuery<LessonProgress>({
-    queryKey: ["/api/lesson-progress", user.id, lessonId],
+    queryKey: ["/api/lesson-progress", user?.id, lessonId],
     queryFn: async () => {
-      const response = await fetch(`/api/lesson-progress?userId=${user.id}`);
+      const response = await fetch(`/api/lesson-progress?userId=${user!.id}`);
       if (!response.ok) throw new Error("Failed to fetch progress");
       const allProgress: LessonProgress[] = await response.json();
       return allProgress.find((p) => p.lessonId === lessonId);
     },
-    enabled: !!lessonId,
+    enabled: !!lessonId && !!user,
   });
 
   const startLessonMutation = useMutation({
     mutationFn: async () => {
       if (progress) return progress;
       return apiRequest("POST", "/api/lesson-progress", {
-        userId: user.id,
+        userId: user!.id,
         lessonId,
         status: "in_progress",
       });
@@ -77,7 +90,7 @@ export default function LessonView() {
     mutationFn: async (activityId: string) => {
       if (!progress) {
         const newProgress = await apiRequest("POST", "/api/lesson-progress", {
-          userId: user.id,
+          userId: user!.id,
           lessonId,
           status: "in_progress",
           activitiesCompleted: [activityId],
@@ -103,6 +116,8 @@ export default function LessonView() {
     },
   });
 
+  if (!user) return null;
+
   const toggleActivity = (activityId: string) => {
     setExpandedActivities((prev) => {
       const next = new Set(prev);
@@ -126,7 +141,7 @@ export default function LessonView() {
   if (lessonLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        <AppHeader user={user} onLogout={handleLogout} />
         <main className="container mx-auto p-6">
           <p className="text-muted-foreground">Loading lesson...</p>
         </main>
@@ -137,7 +152,7 @@ export default function LessonView() {
   if (!lesson) {
     return (
       <div className="min-h-screen bg-background">
-        <AppHeader />
+        <AppHeader user={user} onLogout={handleLogout} />
         <main className="container mx-auto p-6">
           <p className="text-muted-foreground">Lesson not found</p>
         </main>
@@ -150,7 +165,7 @@ export default function LessonView() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <AppHeader user={user} onLogout={handleLogout} />
       <main className="container mx-auto p-6 max-w-4xl">
         <Button
           variant="ghost"

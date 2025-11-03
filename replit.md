@@ -33,8 +33,9 @@ Preferred communication style: Simple, everyday language.
 ### Current Status
 - Dual authentication: Therapist and Client dashboards with role-based routing
 - Therapist features: Session management, client directory, client profiles, dashboard analytics
-- Client features: Parts Mapping, 6 F's Protocol, Letter Writing, personal dashboard
+- Client features: Parts Mapping, 6 F's Protocol, Letter Writing, Learning Library, personal dashboard
 - Client Management: Therapists can view detailed client profiles with parts, journal entries, activities, and session history
+- Educational System: 5 IFS lesson plans with embedded activities, progress tracking, category organization
 - Database persistence working with all API routes
 - AI insights infrastructure ready (Perplexity "sonar" model configured)
 

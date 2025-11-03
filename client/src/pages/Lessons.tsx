@@ -1,10 +1,11 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation, Link } from "wouter";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Clock, CheckCircle2, Circle } from "lucide-react";
-import { Link } from "wouter";
-import type { Lesson, LessonProgress } from "@shared/schema";
+import type { Lesson, LessonProgress, User } from "@shared/schema";
 
 const categoryColors: Record<string, string> = {
   introduction: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
@@ -23,20 +24,38 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function Lessons() {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [, setLocation] = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      setLocation("/login");
+    }
+  }, [setLocation]);
 
   const { data: lessons = [], isLoading: lessonsLoading } = useQuery<Lesson[]>({
     queryKey: ["/api/lessons"],
   });
 
   const { data: progress = [] } = useQuery<LessonProgress[]>({
-    queryKey: ["/api/lesson-progress", user.id],
+    queryKey: ["/api/lesson-progress", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/lesson-progress?userId=${user.id}`);
+      const response = await fetch(`/api/lesson-progress?userId=${user!.id}`);
       if (!response.ok) throw new Error("Failed to fetch progress");
       return response.json();
     },
+    enabled: !!user?.id,
   });
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setLocation("/login");
+  };
+
+  if (!user) return null;
 
   const getLessonProgress = (lessonId: string) => {
     return progress.find((p) => p.lessonId === lessonId);
@@ -69,7 +88,7 @@ export default function Lessons() {
 
   return (
     <div className="min-h-screen bg-background">
-      <AppHeader />
+      <AppHeader user={user} onLogout={handleLogout} />
       <main className="container mx-auto p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Learning Library</h1>
