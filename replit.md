@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (November 2025)
 
+### Therapist Dashboard & Session Management (Latest)
+- Full therapist dashboard with role-based routing
+- Session creation and management with client selection
+- Client directory showing all registered clients with session counts
+- Real-time dashboard metrics: Total Clients, Active Sessions, Scheduled, Completed
+- Authorization: therapist-only access to client data via /api/users endpoint
+- Query optimization: staleTime: 0 and refetchOnMount: "always" for fresh data
+- Error handling for corrupted localStorage with automatic cleanup
+
 ### Database Migration Completed
 - Migrated from in-memory storage to PostgreSQL with Drizzle ORM
 - Neon Serverless driver configured with WebSocket support
@@ -22,10 +31,11 @@ Preferred communication style: Simple, everyday language.
 - Activity types: parts_mapping (in-progress), six_fs, letter_writing, witnessing, unburdening (completed)
 
 ### Current Status
-- Core MVP features functional: Login, Parts Mapping, 6 F's Protocol, Letter Writing
+- Dual authentication: Therapist and Client dashboards with role-based routing
+- Therapist features: Session management, client directory, dashboard analytics
+- Client features: Parts Mapping, 6 F's Protocol, Letter Writing, personal dashboard
 - Database persistence working with all API routes
-- Dashboard shows real activity completion data
-- AI insights infrastructure ready (Perplexity integration pending)
+- AI insights infrastructure ready (Perplexity "sonar" model configured)
 
 ## System Architecture
 
@@ -53,15 +63,15 @@ Preferred communication style: Simple, everyday language.
 - GET/POST/PATCH endpoints for CRUD operations on resources
 - Query parameters for filtering (e.g., userId)
 
-**Session Management**: Simple credential-based authentication storing user data in localStorage. The system supports two user roles: "therapist" and "client", though current implementation appears focused on client self-work.
+**Session Management**: Simple credential-based authentication storing user data in localStorage. The system supports two user roles: "therapist" and "client" with dedicated dashboards for each role. Therapists can create and manage therapy sessions, view all registered clients, and track session progress. Clients access self-work tools and their personal therapeutic activities.
 
 **Business Logic**: In-memory storage implementation using an IStorage interface, designed to be swappable with a database-backed implementation. The storage layer handles users, therapy sessions, activities, parts (the IFS concept of internal subpersonalities), journal entries, AI insights, and media.
 
 ### Data Storage Solutions
 
-**Current Implementation**: In-memory storage via the IStorage interface defined in `server/storage.ts`. This provides CRUD operations for all entity types but data is ephemeral.
+**Current Implementation**: PostgreSQL database with Drizzle ORM via the IStorage interface defined in `server/storage.ts`. This provides persistent CRUD operations for all entity types.
 
-**Planned Implementation**: PostgreSQL database via Drizzle ORM. The schema is fully defined in `shared/schema.ts` with tables for:
+**Database Schema**: Fully defined in `shared/schema.ts` with tables for:
 - **users**: Authentication and profile data with role differentiation
 - **sessions**: Therapy session tracking with status workflow
 - **parts**: IFS parts mapping (managers, firefighters, exiles) with visual positioning data
@@ -119,9 +129,13 @@ Preferred communication style: Simple, everyday language.
 
 **Current Model**: Simple credential-based login with username/password. Auto-creates users on first login attempt. No password hashing or session tokens implemented - this is a prototype/development authentication system.
 
-**Role System**: Two-role model (therapist/client) defined in schema but minimal role-based access control in current implementation.
+**Role System**: Two-role model (therapist/client) with full role-based access control:
+- Therapists: Access to TherapistDashboard, session management, client directory, protected /api/users endpoint
+- Clients: Access to personal Dashboard, therapeutic activities (Parts Mapping, 6 F's, Letter Writing)
+- RoleBasedDashboard component routes users to appropriate interface based on role
+- Corrupted localStorage handled gracefully with automatic cleanup and redirect to login
 
-**Session Persistence**: User object stored in localStorage after successful login, retrieved on protected route access.
+**Session Persistence**: User object stored in localStorage after successful login, retrieved on protected route access. React Query configured with aggressive refetching (staleTime: 0, refetchOnMount: "always") to ensure fresh data after login/logout cycles.
 
 ### Architectural Decisions
 
