@@ -6,17 +6,42 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import TherapistDashboard from "@/pages/TherapistDashboard";
 import PartsMapping from "@/pages/PartsMapping";
 import SixFs from "@/pages/SixFs";
 import LetterWrite from "@/pages/LetterWrite";
 import NotFound from "@/pages/not-found";
+
+function RoleBasedDashboard() {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) {
+    return <Redirect to="/login" />;
+  }
+  
+  try {
+    const user = JSON.parse(userStr);
+    if (!user || !user.role) {
+      localStorage.removeItem("user");
+      return <Redirect to="/login" />;
+    }
+    
+    if (user.role === "therapist") {
+      return <TherapistDashboard />;
+    }
+    
+    return <Dashboard />;
+  } catch (error) {
+    localStorage.removeItem("user");
+    return <Redirect to="/login" />;
+  }
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={() => <Redirect to="/login" />} />
       <Route path="/login" component={Login} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard" component={RoleBasedDashboard} />
       <Route path="/parts-mapping" component={PartsMapping} />
       <Route path="/six-fs" component={SixFs} />
       <Route path="/letter" component={LetterWrite} />

@@ -19,6 +19,7 @@ import { randomUUID } from "crypto";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(role?: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
 
   getSessionsByUserId(userId: string): Promise<Session[]>;
@@ -76,6 +77,14 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
     );
+  }
+
+  async getAllUsers(role?: string): Promise<User[]> {
+    const allUsers = Array.from(this.users.values());
+    if (role) {
+      return allUsers.filter(user => user.role === role);
+    }
+    return allUsers;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -290,6 +299,17 @@ export class DatabaseStorage implements IStorage {
       where: eq(schema.users.username, username),
     });
     return result;
+  }
+
+  async getAllUsers(role?: string): Promise<User[]> {
+    if (role) {
+      const results = await this.db.query.users.findMany({
+        where: eq(schema.users.role, role),
+      });
+      return results;
+    }
+    const results = await this.db.query.users.findMany();
+    return results;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
