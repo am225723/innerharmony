@@ -13,6 +13,12 @@ import {
   type InsertAIInsight,
   type Media,
   type InsertMedia,
+  type Lesson,
+  type InsertLesson,
+  type LessonActivity,
+  type InsertLessonActivity,
+  type LessonProgress,
+  type InsertLessonProgress,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -48,6 +54,18 @@ export interface IStorage {
 
   getMediaByUserId(userId: string): Promise<Media[]>;
   createMedia(media: InsertMedia): Promise<Media>;
+
+  getAllLessons(): Promise<Lesson[]>;
+  getLesson(id: string): Promise<Lesson | undefined>;
+  createLesson(lesson: InsertLesson): Promise<Lesson>;
+
+  getLessonActivitiesByLessonId(lessonId: string): Promise<LessonActivity[]>;
+  createLessonActivity(activity: InsertLessonActivity): Promise<LessonActivity>;
+
+  getLessonProgressByUserId(userId: string): Promise<LessonProgress[]>;
+  getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | undefined>;
+  createLessonProgress(progress: InsertLessonProgress): Promise<LessonProgress>;
+  updateLessonProgress(id: string, updates: Partial<LessonProgress>): Promise<LessonProgress | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -481,6 +499,73 @@ export class DatabaseStorage implements IStorage {
       .values(insertMedia)
       .returning();
     return mediaItem;
+  }
+
+  async getAllLessons(): Promise<Lesson[]> {
+    const results = await this.db.query.lessons.findMany();
+    return results;
+  }
+
+  async getLesson(id: string): Promise<Lesson | undefined> {
+    const result = await this.db.query.lessons.findFirst({
+      where: eq(schema.lessons.id, id),
+    });
+    return result;
+  }
+
+  async createLesson(insertLesson: InsertLesson): Promise<Lesson> {
+    const [lesson] = await this.db
+      .insert(schema.lessons)
+      .values(insertLesson)
+      .returning();
+    return lesson;
+  }
+
+  async getLessonActivitiesByLessonId(lessonId: string): Promise<LessonActivity[]> {
+    const results = await this.db.query.lessonActivities.findMany({
+      where: eq(schema.lessonActivities.lessonId, lessonId),
+    });
+    return results;
+  }
+
+  async createLessonActivity(insertActivity: InsertLessonActivity): Promise<LessonActivity> {
+    const [activity] = await this.db
+      .insert(schema.lessonActivities)
+      .values(insertActivity)
+      .returning();
+    return activity;
+  }
+
+  async getLessonProgressByUserId(userId: string): Promise<LessonProgress[]> {
+    const results = await this.db.query.lessonProgress.findMany({
+      where: eq(schema.lessonProgress.userId, userId),
+    });
+    return results;
+  }
+
+  async getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | undefined> {
+    const result = await this.db.query.lessonProgress.findFirst({
+      where: (progress, { and, eq }) =>
+        and(eq(progress.userId, userId), eq(progress.lessonId, lessonId)),
+    });
+    return result;
+  }
+
+  async createLessonProgress(insertProgress: InsertLessonProgress): Promise<LessonProgress> {
+    const [progress] = await this.db
+      .insert(schema.lessonProgress)
+      .values(insertProgress)
+      .returning();
+    return progress;
+  }
+
+  async updateLessonProgress(id: string, updates: Partial<LessonProgress>): Promise<LessonProgress | undefined> {
+    const [updated] = await this.db
+      .update(schema.lessonProgress)
+      .set(updates)
+      .where(eq(schema.lessonProgress.id, id))
+      .returning();
+    return updated;
   }
 }
 

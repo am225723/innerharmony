@@ -85,6 +85,39 @@ export const media = pgTable("media", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const lessons = pgTable("lessons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category", { enum: ["introduction", "understanding_parts", "self_leadership", "unburdening", "advanced"] }).notNull(),
+  order: text("order").notNull(),
+  content: jsonb("content").notNull(),
+  estimatedMinutes: text("estimated_minutes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const lessonActivities = pgTable("lesson_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  lessonId: varchar("lesson_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  type: text("type", { enum: ["reflection", "journaling", "parts_work", "meditation", "exercise"] }).notNull(),
+  order: text("order").notNull(),
+  content: jsonb("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const lessonProgress = pgTable("lesson_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  lessonId: varchar("lesson_id").notNull(),
+  status: text("status", { enum: ["not_started", "in_progress", "completed"] }).notNull().default("not_started"),
+  activitiesCompleted: text("activities_completed").array().default(sql`ARRAY[]::text[]`),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -123,6 +156,23 @@ export const insertMediaSchema = createInsertSchema(media).omit({
   createdAt: true,
 });
 
+export const insertLessonSchema = createInsertSchema(lessons).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLessonActivitySchema = createInsertSchema(lessonActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLessonProgressSchema = createInsertSchema(lessonProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -150,4 +200,10 @@ export type AIInsight = typeof aiInsights.$inferSelect;
 export type InsertAIInsight = z.infer<typeof insertAIInsightSchema>;
 export type Media = typeof media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
+export type Lesson = typeof lessons.$inferSelect;
+export type InsertLesson = z.infer<typeof insertLessonSchema>;
+export type LessonActivity = typeof lessonActivities.$inferSelect;
+export type InsertLessonActivity = z.infer<typeof insertLessonActivitySchema>;
+export type LessonProgress = typeof lessonProgress.$inferSelect;
+export type InsertLessonProgress = z.infer<typeof insertLessonProgressSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
