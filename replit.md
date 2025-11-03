@@ -10,15 +10,44 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (November 2025)
 
-### Educational Lesson System (Latest)
-- Learning Library with 5 comprehensive IFS therapy lessons
-- Embedded interactive activities (reflection, journaling, parts work)
-- Progress tracking: not_started → in_progress → completed
-- Category-based organization (Introduction, Understanding Parts, Self-Leadership, Unburdening, Advanced)
-- Stats dashboard showing Total Lessons, Completed, In Progress
-- Activity completion automatically updates lesson progress
-- Routes: /lessons (library), /lessons/:id (individual lesson view)
-- React hooks ordering fixed for stable rendering
+### Comprehensive IFS Educational Curriculum (Latest - November 2025)
+**Complete 10-Module Professional IFS Course:**
+- **Course Introduction**: Welcome to Your Inner World - Foundation concepts of multiplicity and parts
+- **Module 1**: The Foundations of Your Inner World - Understanding the IFS model
+- **Module 2**: Understanding Your Managers - Proactive protectors that control and prevent
+- **Module 3**: Understanding Your Firefighters - Reactive protectors that extinguish emotional pain
+- **Module 4**: Understanding Your Exiles - Wounded inner children and the 5 Core Childhood Wounds (Rejection, Abandonment, Injustice, Betrayal, Neglect)
+- **Module 5**: The Self - Your Inner Healer and the 8 C's of Self-Energy (Curiosity, Compassion, Calm, Clarity, Confidence, Courage, Creativity, Connectedness)
+- **Module 6**: The 6 F's Protocol - Complete step-by-step protocol for befriending protectors (Find, Focus, Flesh Out, Feel Toward, beFriend, Fear)
+- **Module 7**: Witnessing and Validating Your Exiles - Sacred process of bearing witness and providing validation
+- **Module 8**: Unburdening and Reparenting - Complete protocol: Retrieve, Unburden, Invite, Integrate
+- **Module 9**: Integration and Daily Self-Leadership - Bringing IFS into daily life with practices
+
+**14 Interactive Protocol-Based Activities:**
+- Grounding exercises and safety protocols
+- Parts mapping and identification (Managers, Firefighters, Exiles)
+- Core wounds assessment (5 childhood wound types)
+- 8 C's Self-Energy assessment
+- Self-energy access meditation
+- Complete 6 F's Protocol walkthrough (7-step interactive guide)
+- Witnessing an Exile (guided process with safety checks)
+- Complete Unburdening Protocol (10-step reparenting process)
+- Daily Self-Leadership practices (morning/evening/weekly check-ins)
+- Triggering moments response practice
+
+**Tiered Safety System:**
+- Three track levels: Foundations, Deepening Practice, Therapeutic Skills
+- Three safety levels: gentle, moderate, intensive
+- Trauma warnings on high-intensity modules (3, 4, 7, 8)
+- Required safety checks for protocol activities
+- Grounding exercises embedded throughout
+
+**Advanced Content Rendering:**
+- Rich nested JSON content structure supporting: qualities, protocols, examples, wounds, reparenting frameworks
+- Dynamic section rendering for 15+ content types (keyPoints, criticalInsights, quotes, safety principles)
+- Protocol step visualization with instructions, processes, questions, examples
+- Side-by-side reparenting comparisons (What Exiles Needed vs What Self Provides)
+- Progress tracking with automatic status updates based on activity completion
 
 ### Therapist Dashboard & Session Management
 - Full therapist dashboard with role-based routing
@@ -43,11 +72,12 @@ Preferred communication style: Simple, everyday language.
 ### Current Status
 - Dual authentication: Therapist and Client dashboards with role-based routing
 - Therapist features: Session management, client directory, client profiles, dashboard analytics
-- Client features: Parts Mapping, 6 F's Protocol, Letter Writing, Learning Library, personal dashboard
+- Client features: Parts Mapping, 6 F's Protocol, Letter Writing, Comprehensive Learning Library, personal dashboard
 - Client Management: Therapists can view detailed client profiles with parts, journal entries, activities, and session history
-- Educational System: 5 IFS lesson plans with embedded activities, progress tracking, category organization
+- **Comprehensive Educational System**: 10-module professional IFS course (Course Intro + 9 modules) with 14 interactive protocol-based activities, tiered safety system, trauma warnings, and complete therapeutic protocols from foundations through integration
 - Database persistence working with all API routes
 - AI insights infrastructure ready (Perplexity "sonar" model configured)
+- E2E tested: All course modules, protocol rendering, nested content display, safety features verified working
 
 ## System Architecture
 
