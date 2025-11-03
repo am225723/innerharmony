@@ -47,27 +47,6 @@ export function DashboardOverview({
     ? Math.round((completedActivities.length / activities.length) * 100) 
     : 0;
 
-  const generateInsightMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/ai-insights/generate", { userId: user.id });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/ai-insights?userId=${user.id}`] });
-      toast({
-        title: "AI Insight Generated",
-        description: "Your personalized guidance is ready",
-      });
-    },
-    onError: (error) => {
-      console.error("AI insight generation error:", error);
-      toast({
-        title: "Generation Failed",
-        description: "Unable to generate AI insight. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "parts_mapping": return Shield;

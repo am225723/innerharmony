@@ -25,25 +25,35 @@ async function callPerplexityAPI(
     { role: "user", content: userPrompt },
   ];
 
+  const requestBody = {
+    model: "sonar",
+    messages,
+    temperature: 0.7,
+    top_p: 0.9,
+    stream: false,
+    return_images: false,
+    return_related_questions: false,
+  };
+
+  console.log("[AI Insights] Calling Perplexity API with model:", requestBody.model);
+
   const response = await fetch(PERPLEXITY_API_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: "llama-3.1-sonar-small-128k-online",
-      messages,
-      temperature: 0.7,
-      top_p: 0.9,
-      stream: false,
-      return_images: false,
-      return_related_questions: false,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
-    throw new Error(`Perplexity API error: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error("[AI Insights] Perplexity API error:", {
+      status: response.status,
+      statusText: response.statusText,
+      error: errorText,
+    });
+    throw new Error(`Perplexity API error: ${response.statusText} - ${errorText}`);
   }
 
   const data: PerplexityResponse = await response.json();
