@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import * as aiInsights from "./ai-insights";
 import {
   insertUserSchema,
   insertSessionSchema,
@@ -713,6 +714,126 @@ Provide a personalized IFS insight for this client.`;
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // AI Insights Routes
+  app.post("/api/ai/journal-reflection", async (req: Request, res: Response) => {
+    try {
+      const { entryId } = req.body;
+      if (!entryId) {
+        return res.status(400).json({ error: "entryId required" });
+      }
+      
+      const entry = await storage.getJournalEntry(entryId);
+      if (!entry) {
+        return res.status(404).json({ error: "Journal entry not found" });
+      }
+      
+      const reflection = await aiInsights.analyzeJournalEntry(entry);
+      res.json({ reflection });
+    } catch (error) {
+      console.error("AI journal reflection error:", error);
+      res.status(500).json({ error: "Failed to generate reflection" });
+    }
+  });
+
+  app.post("/api/ai/parts-analysis", async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const parts = await storage.getPartsByUserId(userId);
+      if (parts.length === 0) {
+        return res.status(400).json({ error: "No parts found for analysis" });
+      }
+      
+      const analysis = await aiInsights.analyzePartsPatterns(parts);
+      res.json({ analysis });
+    } catch (error) {
+      console.error("AI parts analysis error:", error);
+      res.status(500).json({ error: "Failed to generate analysis" });
+    }
+  });
+
+  app.post("/api/ai/ask-question", async (req: Request, res: Response) => {
+    try {
+      const { question, userId } = req.body;
+      if (!question) {
+        return res.status(400).json({ error: "question required" });
+      }
+      
+      let userContext;
+      if (userId) {
+        const parts = await storage.getPartsByUserId(userId);
+        const journalEntries = await storage.getJournalEntriesByUserId(userId);
+        const activities = await storage.getActivitiesByUserId(userId);
+        
+        userContext = {
+          partsCount: parts.length,
+          journalEntriesCount: journalEntries.length,
+          recentProtocols: activities
+            .slice(0, 3)
+            .map(a => a.type)
+            .filter((v, i, a) => a.indexOf(v) === i),
+        };
+      }
+      
+      const answer = await aiInsights.answerTherapeuticQuestion(question, userContext);
+      res.json({ answer });
+    } catch (error) {
+      console.error("AI question answering error:", error);
+      res.status(500).json({ error: "Failed to answer question" });
+    }
+  });
+
+  app.post("/api/ai/unburdening-visualization", async (req: Request, res: Response) => {
+    try {
+      const { partId, burden } = req.body;
+      if (!partId || !burden) {
+        return res.status(400).json({ error: "partId and burden required" });
+      }
+      
+      const part = await storage.getPart(partId);
+      if (!part) {
+        return res.status(404).json({ error: "Part not found" });
+      }
+      
+      if (part.type !== "exile") {
+        return res.status(400).json({ error: "Unburdening visualizations are for exile parts" });
+      }
+      
+      const visualization = await aiInsights.generateUnburdeningVisualization(part, burden);
+      res.json({ visualization });
+    } catch (error) {
+      console.error("AI visualization generation error:", error);
+      res.status(500).json({ error: "Failed to generate visualization" });
+    }
+  });
+
+  app.post("/api/ai/protector-appreciation", async (req: Request, res: Response) => {
+    try {
+      const { partId } = req.body;
+      if (!partId) {
+        return res.status(400).json({ error: "partId required" });
+      }
+      
+      const part = await storage.getPart(partId);
+      if (!part) {
+        return res.status(404).json({ error: "Part not found" });
+      }
+      
+      if (part.type === "exile") {
+        return res.status(400).json({ error: "Appreciation messages are for protector parts" });
+      }
+      
+      const appreciation = await aiInsights.suggestProtectorAppreciation(part);
+      res.json({ appreciation });
+    } catch (error) {
+      console.error("AI appreciation generation error:", error);
+      res.status(500).json({ error: "Failed to generate appreciation" });
     }
   });
 
