@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { SixFsProtocol } from "@/components/journal/SixFsProtocol";
+import { BackgroundMusicPlayer } from "@/components/media/BackgroundMusicPlayer";
 import { useToast } from "@/hooks/use-toast";
 import { type User } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -61,6 +62,7 @@ export default function SixFs() {
     <div className="min-h-screen bg-background">
       <AppHeader user={user} onLogout={handleLogout} />
       <SixFsProtocol onComplete={handleComplete} />
+      <BackgroundMusicPlayer />
     </div>
   );
 }

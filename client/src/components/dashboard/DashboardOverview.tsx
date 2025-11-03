@@ -261,20 +261,21 @@ export function DashboardOverview({
               </Button>
             </Link>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto p-4 gap-3"
-              data-testid="button-meditation"
-              disabled
-            >
-              <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                <Heart className="w-5 h-5 text-accent" />
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-medium">Inner Child Meditation</p>
-                <p className="text-xs text-muted-foreground">Coming soon</p>
-              </div>
-            </Button>
+            <Link href="/media-library">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-auto p-4 gap-3"
+                data-testid="button-media-library"
+              >
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <Heart className="w-5 h-5 text-accent" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium">Multimedia Library</p>
+                  <p className="text-xs text-muted-foreground">Meditations, videos & wound mapping</p>
+                </div>
+              </Button>
+            </Link>
 
             <Link href="/letter">
               <Button

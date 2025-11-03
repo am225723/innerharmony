@@ -14,6 +14,7 @@ import LetterWrite from "@/pages/LetterWrite";
 import Lessons from "@/pages/Lessons";
 import LessonView from "@/pages/LessonView";
 import SharedSessionWorkspace from "@/pages/SharedSessionWorkspace";
+import MediaLibrary from "@/pages/MediaLibrary";
 import NotFound from "@/pages/not-found";
 
 function RoleBasedDashboard() {
@@ -53,6 +54,7 @@ function Router() {
       <Route path="/lessons" component={Lessons} />
       <Route path="/lessons/:id" component={LessonView} />
       <Route path="/session/:sessionId" component={SharedSessionWorkspace} />
+      <Route path="/media-library" component={MediaLibrary} />
       <Route component={NotFound} />
     </Switch>
   );

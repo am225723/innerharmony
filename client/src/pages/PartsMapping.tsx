@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { PartsCanvas } from "@/components/parts/PartsCanvas";
 import { AIInsights } from "@/components/AIInsights";
+import { BackgroundMusicPlayer } from "@/components/media/BackgroundMusicPlayer";
 import { type User, type Part } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -134,6 +135,7 @@ export default function PartsMapping() {
           </div>
         )}
       </div>
+      <BackgroundMusicPlayer />
     </div>
   );
 }

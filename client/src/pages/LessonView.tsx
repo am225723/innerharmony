@@ -17,6 +17,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 import type { Lesson, LessonActivity, LessonProgress } from "@shared/schema";
+import { AudioPlayer } from "@/components/media/AudioPlayer";
+import { getMediaById } from "@/lib/mediaLibrary";
 
 export default function LessonView() {
   const [, params] = useRoute("/lessons/:id");
@@ -410,6 +412,25 @@ export default function LessonView() {
                     </CardHeader>
                     {isExpanded && (
                       <CardContent className="space-y-4">
+                        {/* Audio player for meditation activities */}
+                        {activity.type === "meditation" && (
+                          <div className="mb-4">
+                            {(() => {
+                              const meditationAudio = getMediaById("self-energy-meditation");
+                              if (meditationAudio) {
+                                return (
+                                  <AudioPlayer
+                                    src={meditationAudio.src}
+                                    title={meditationAudio.title}
+                                    description={meditationAudio.description}
+                                    variant="default"
+                                  />
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        )}
                         {activityContent?.prompt && (
                           <div className="p-4 rounded-lg bg-muted">
                             <p className="text-sm font-medium mb-2">Reflection Prompt:</p>
