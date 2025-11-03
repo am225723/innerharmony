@@ -10,7 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates (November 2025)
 
-### Therapist Dashboard & Session Management (Latest)
+### Educational Lesson System (Latest)
+- Learning Library with 5 comprehensive IFS therapy lessons
+- Embedded interactive activities (reflection, journaling, parts work)
+- Progress tracking: not_started → in_progress → completed
+- Category-based organization (Introduction, Understanding Parts, Self-Leadership, Unburdening, Advanced)
+- Stats dashboard showing Total Lessons, Completed, In Progress
+- Activity completion automatically updates lesson progress
+- Routes: /lessons (library), /lessons/:id (individual lesson view)
+- React hooks ordering fixed for stable rendering
+
+### Therapist Dashboard & Session Management
 - Full therapist dashboard with role-based routing
 - Session creation and management with client selection
 - Client directory showing all registered clients with session counts
