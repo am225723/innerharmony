@@ -1,4 +1,7 @@
 import { Link } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +18,7 @@ import {
   Flame,
   Shield,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
 
@@ -35,11 +39,33 @@ export function DashboardOverview({
   onCreateSession,
   onViewActivity,
 }: DashboardOverviewProps) {
+  const { toast } = useToast();
   const activeSessions = sessions.filter(s => s.status === "active");
   const completedActivities = activities.filter(a => a.status === "completed");
   const completionRate = activities.length > 0 
     ? Math.round((completedActivities.length / activities.length) * 100) 
     : 0;
+
+  const generateInsightMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/ai-insights/generate", { userId: user.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/ai-insights?userId=${user.id}`] });
+      toast({
+        title: "AI Insight Generated",
+        description: "Your personalized guidance is ready",
+      });
+    },
+    onError: (error) => {
+      console.error("AI insight generation error:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Unable to generate AI insight. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -269,6 +295,81 @@ export function DashboardOverview({
                 </div>
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        {/* AI Insights Panel */}
+        <Card data-testid="card-ai-insights-panel">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="font-display flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  AI Insights
+                </CardTitle>
+                <CardDescription>Personalized IFS guidance for your journey</CardDescription>
+              </div>
+              <Button
+                onClick={() => generateInsightMutation.mutate()}
+                disabled={generateInsightMutation.isPending}
+                size="sm"
+                data-testid="button-generate-insight"
+              >
+                {generateInsightMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    New Insight
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {aiInsights.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Brain className="w-8 h-8 text-primary" />
+                </div>
+                <h3 className="font-medium mb-1">No insights yet</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                  Complete some activities to receive personalized IFS guidance from AI
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {aiInsights.slice(0, 3).map((insight) => (
+                  <div
+                    key={insight.id}
+                    className="p-4 rounded-lg bg-primary/5 border border-primary/20"
+                    data-testid={`insight-${insight.id}`}
+                  >
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {insight.type === "personalized_guidance" ? "Guidance" : "Insight"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(insight.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {insight.insight}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

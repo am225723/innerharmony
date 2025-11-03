@@ -328,6 +328,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Perplexity API
+  app.get("/api/test-perplexity", async (req: Request, res: Response) => {
+    try {
+      const apiKey = process.env.PERPLEXITY_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "PERPLEXITY_API_KEY not set" });
+      }
+
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            { role: "system", content: "Be precise and concise." },
+            { role: "user", content: "Say 'Hello from Perplexity!'" }
+          ],
+          temperature: 0.2,
+          stream: false,
+        }),
+      });
+
+      const data = await response.json();
+      res.json({ status: response.status, data });
+    } catch (error) {
+      console.error('Perplexity test error:', error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
   // AI Insights Routes
   app.get("/api/ai-insights", async (req: Request, res: Response) => {
     try {
@@ -343,16 +376,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/ai-insights/generate", async (req: Request, res: Response) => {
+    try {
+      const { userId, sessionId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+
+      // Gather user data for AI insight
+      const parts = await storage.getPartsByUserId(userId);
+      const journalEntries = await storage.getJournalEntriesByUserId(userId);
+      const recentActivities = await storage.getActivitiesByUserId(userId);
+      
+      // Build context for AI
+      const partsContext = parts.map(p => 
+        `${p.name} (${p.type}): ${p.description || 'No description'}`
+      ).join('\n');
+      
+      const journalContext = journalEntries.slice(0, 3).map(j => 
+        `${j.protocol}: ${j.responses?.find ? 'Completed' : 'In progress'}`
+      ).join('\n');
+
+      const systemPrompt = `You are a compassionate Internal Family Systems (IFS) therapy guide. Based on the client's parts and therapeutic work, provide a brief, personalized insight (2-3 paragraphs) that:
+1. Acknowledges their progress and self-awareness
+2. Offers a gentle IFS-based perspective on their internal system
+3. Suggests a specific next step for their healing journey
+
+Be warm, validating, and use IFS terminology naturally.`;
+
+      const userPrompt = `Client's Internal Parts:
+${partsContext || 'No parts mapped yet'}
+
+Recent Therapeutic Work:
+${journalContext || 'No journal entries yet'}
+
+Provide a personalized IFS insight for this client.`;
+
+      // Call Perplexity API
+      const apiKey = process.env.PERPLEXITY_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Perplexity API key not configured" });
+      }
+
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          max_tokens: 500,
+          temperature: 0.7,
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Perplexity API error:', response.status, errorText);
+        throw new Error(`Perplexity API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Perplexity API response:', JSON.stringify(data, null, 2));
+      const generatedInsight = data.choices[0]?.message?.content;
+
+      if (!generatedInsight) {
+        throw new Error("No insight generated from AI");
+      }
+
+      // Store the insight
+      const insight = await storage.createAIInsight({
+        userId,
+        sessionId: sessionId || null,
+        context: `Based on ${parts.length} parts, ${journalEntries.length} journal entries, and ${recentActivities.length} activities`,
+        insight: generatedInsight,
+      });
+
+      res.status(201).json(insight);
+    } catch (error) {
+      console.error('AI insight generation error:', error);
+      res.status(500).json({ error: "Failed to generate AI insight" });
+    }
+  });
+
   app.post("/api/ai-insights", async (req: Request, res: Response) => {
     try {
       const insightData = insertAIInsightSchema.parse(req.body);
-      
-      // TODO: Integrate with Perplexity API for actual AI generation
-      const insight = await storage.createAIInsight({
-        ...insightData,
-        insight: "Based on your 6 F's journey, you're showing deep awareness of how your anxious part operates. This part has been protecting you by staying vigilant, likely in response to earlier experiences where you felt unsafe or unsupported. Consider gently acknowledging this part's hard work while exploring what it would need to feel safe stepping back.",
-      });
-      
+      const insight = await storage.createAIInsight(insightData);
       res.status(201).json(insight);
     } catch (error) {
       if (error instanceof z.ZodError) {
