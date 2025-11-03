@@ -19,6 +19,10 @@ import {
   type InsertLessonActivity,
   type LessonProgress,
   type InsertLessonProgress,
+  type SessionMessage,
+  type InsertSessionMessage,
+  type SessionNote,
+  type InsertSessionNote,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -66,6 +70,13 @@ export interface IStorage {
   getLessonProgress(userId: string, lessonId: string): Promise<LessonProgress | undefined>;
   createLessonProgress(progress: InsertLessonProgress): Promise<LessonProgress>;
   updateLessonProgress(id: string, updates: Partial<LessonProgress>): Promise<LessonProgress | undefined>;
+
+  // Collaborative session methods
+  getSessionMessages(sessionId: string): Promise<SessionMessage[]>;
+  createSessionMessage(message: InsertSessionMessage): Promise<SessionMessage>;
+  getSessionNotes(sessionId: string): Promise<SessionNote[]>;
+  createSessionNote(note: InsertSessionNote): Promise<SessionNote>;
+  updateSessionNote(id: string, updates: Partial<SessionNote>): Promise<SessionNote | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -564,6 +575,48 @@ export class DatabaseStorage implements IStorage {
       .update(schema.lessonProgress)
       .set(updates)
       .where(eq(schema.lessonProgress.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Collaborative session methods
+  async getSessionMessages(sessionId: string): Promise<SessionMessage[]> {
+    const results = await this.db.query.sessionMessages.findMany({
+      where: eq(schema.sessionMessages.sessionId, sessionId),
+      orderBy: (messages, { asc }) => [asc(messages.createdAt)],
+    });
+    return results;
+  }
+
+  async createSessionMessage(insertMessage: InsertSessionMessage): Promise<SessionMessage> {
+    const [message] = await this.db
+      .insert(schema.sessionMessages)
+      .values(insertMessage)
+      .returning();
+    return message;
+  }
+
+  async getSessionNotes(sessionId: string): Promise<SessionNote[]> {
+    const results = await this.db.query.sessionNotes.findMany({
+      where: eq(schema.sessionNotes.sessionId, sessionId),
+      orderBy: (notes, { desc }) => [desc(notes.updatedAt)],
+    });
+    return results;
+  }
+
+  async createSessionNote(insertNote: InsertSessionNote): Promise<SessionNote> {
+    const [note] = await this.db
+      .insert(schema.sessionNotes)
+      .values(insertNote)
+      .returning();
+    return note;
+  }
+
+  async updateSessionNote(id: string, updates: Partial<SessionNote>): Promise<SessionNote | undefined> {
+    const [updated] = await this.db
+      .update(schema.sessionNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.sessionNotes.id, id))
       .returning();
     return updated;
   }

@@ -12,6 +12,8 @@ import {
   insertLessonSchema,
   insertLessonActivitySchema,
   insertLessonProgressSchema,
+  insertSessionMessageSchema,
+  insertSessionNoteSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -644,6 +646,69 @@ Provide a personalized IFS insight for this client.`;
       const updated = await storage.updateLessonProgress(req.params.id, req.body);
       if (!updated) {
         return res.status(404).json({ error: "Progress not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Collaborative Session Routes
+  app.get("/api/sessions/:sessionId/messages", async (req: Request, res: Response) => {
+    try {
+      const messages = await storage.getSessionMessages(req.params.sessionId);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sessions/:sessionId/messages", async (req: Request, res: Response) => {
+    try {
+      const messageData = insertSessionMessageSchema.parse({
+        ...req.body,
+        sessionId: req.params.sessionId,
+      });
+      const message = await storage.createSessionMessage(messageData);
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/sessions/:sessionId/notes", async (req: Request, res: Response) => {
+    try {
+      const notes = await storage.getSessionNotes(req.params.sessionId);
+      res.json(notes);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/sessions/:sessionId/notes", async (req: Request, res: Response) => {
+    try {
+      const noteData = insertSessionNoteSchema.parse({
+        ...req.body,
+        sessionId: req.params.sessionId,
+      });
+      const note = await storage.createSessionNote(noteData);
+      res.status(201).json(note);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/sessions/:sessionId/notes/:id", async (req: Request, res: Response) => {
+    try {
+      const updated = await storage.updateSessionNote(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Note not found" });
       }
       res.json(updated);
     } catch (error) {
