@@ -9,6 +9,9 @@ import {
   insertJournalEntrySchema,
   insertAIInsightSchema,
   insertMediaSchema,
+  insertLessonSchema,
+  insertLessonActivitySchema,
+  insertLessonProgressSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -548,6 +551,102 @@ Provide a personalized IFS insight for this client.`;
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Lesson Routes
+  app.get("/api/lessons", async (req: Request, res: Response) => {
+    try {
+      const lessons = await storage.getAllLessons();
+      res.json(lessons);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/lessons/:id", async (req: Request, res: Response) => {
+    try {
+      const lesson = await storage.getLesson(req.params.id);
+      if (!lesson) {
+        return res.status(404).json({ error: "Lesson not found" });
+      }
+      res.json(lesson);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/lessons", async (req: Request, res: Response) => {
+    try {
+      const lessonData = insertLessonSchema.parse(req.body);
+      const lesson = await storage.createLesson(lessonData);
+      res.status(201).json(lesson);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/lessons/:id/activities", async (req: Request, res: Response) => {
+    try {
+      const activities = await storage.getLessonActivitiesByLessonId(req.params.id);
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/lesson-activities", async (req: Request, res: Response) => {
+    try {
+      const activityData = insertLessonActivitySchema.parse(req.body);
+      const activity = await storage.createLessonActivity(activityData);
+      res.status(201).json(activity);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/lesson-progress", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const progress = await storage.getLessonProgressByUserId(userId);
+      res.json(progress);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/lesson-progress", async (req: Request, res: Response) => {
+    try {
+      const progressData = insertLessonProgressSchema.parse(req.body);
+      const progress = await storage.createLessonProgress(progressData);
+      res.status(201).json(progress);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/lesson-progress/:id", async (req: Request, res: Response) => {
+    try {
+      const updated = await storage.updateLessonProgress(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: "Progress not found" });
+      }
+      res.json(updated);
+    } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
