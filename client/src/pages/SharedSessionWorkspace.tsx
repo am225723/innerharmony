@@ -38,7 +38,7 @@ export default function SharedSessionWorkspace() {
     messages: wsMessages,
     participants,
     sendMessage,
-  } = useWebSocket(sessionId || '', currentUser.id, currentUser.displayName);
+  } = useWebSocket(sessionId || '', currentUser.id, currentUser.displayName, currentUser.role);
 
   // Combine persisted and WebSocket messages
   const allMessages = [...persistedMessages, ...wsMessages];
@@ -51,7 +51,7 @@ export default function SharedSessionWorkspace() {
         `/api/sessions/${sessionId}/messages`,
         {
           senderId: currentUser.id,
-          senderName: currentUser.displayName,
+          senderRole: currentUser.role,
           content,
         }
       );
@@ -109,7 +109,7 @@ export default function SharedSessionWorkspace() {
             </h1>
             {session && (
               <p className="text-muted-foreground" data-testid="text-session-info">
-                {session.notes || 'Therapy Session'}
+                {session.title || 'Therapy Session'}
               </p>
             )}
           </div>
@@ -154,7 +154,7 @@ export default function SharedSessionWorkspace() {
                       }`}
                     >
                       <div className="font-semibold text-sm mb-1" data-testid={`text-sender-${index}`}>
-                        {msg.senderName}
+                        {msg.senderRole === 'therapist' ? 'Therapist' : 'Client'}
                       </div>
                       <div data-testid={`text-content-${index}`}>{msg.content}</div>
                       <div className="text-xs opacity-70 mt-1" data-testid={`text-time-${index}`}>
@@ -207,14 +207,12 @@ export default function SharedSessionWorkspace() {
                       {session.status}
                     </Badge>
                   </div>
-                  {session.scheduledFor && (
-                    <div>
-                      <div className="text-sm font-medium">Scheduled</div>
-                      <div className="text-sm text-muted-foreground mt-1" data-testid="text-scheduled">
-                        {format(new Date(session.scheduledFor), 'PPp')}
-                      </div>
+                  <div>
+                    <div className="text-sm font-medium">Created</div>
+                    <div className="text-sm text-muted-foreground mt-1" data-testid="text-created">
+                      {format(new Date(session.createdAt), 'PPp')}
                     </div>
-                  )}
+                  </div>
                 </>
               )}
             </CardContent>

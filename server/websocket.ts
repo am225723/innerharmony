@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { Server as HTTPServer } from "http";
 import type { User } from "@shared/schema";
+import { storage } from "./storage";
 
 interface SessionRoom {
   sessionId: string;
@@ -32,7 +33,9 @@ export function setupWebSocket(server: HTTPServer) {
         
         switch (message.type) {
           case "join":
-            handleJoin(ws, message);
+            handleJoin(ws, message).catch(err => {
+              console.error("handleJoin error:", err);
+            });
             break;
           
           case "leave":
@@ -104,10 +107,35 @@ export function setupWebSocket(server: HTTPServer) {
   return wss;
 }
 
-function handleJoin(ws: WebSocket, message: WSMessage) {
+async function handleJoin(ws: WebSocket, message: WSMessage) {
   const { sessionId, userId, role } = message;
   
   if (!sessionId || !userId || !role) {
+    ws.send(JSON.stringify({ type: "error", message: "Missing required fields" }));
+    return;
+  }
+
+  // SECURITY: Verify user is authorized to join this session
+  try {
+    const session = await storage.getSession(sessionId);
+    if (!session) {
+      ws.send(JSON.stringify({ type: "error", message: "Session not found" }));
+      return;
+    }
+
+    // Verify user is either the therapist or client for this session
+    const isAuthorized = 
+      (role === "therapist" && session.therapistId === userId) ||
+      (role === "client" && session.clientId === userId);
+
+    if (!isAuthorized) {
+      ws.send(JSON.stringify({ type: "error", message: "Unauthorized: You are not a participant in this session" }));
+      console.warn(`Unauthorized join attempt: User ${userId} tried to join session ${sessionId} as ${role}`);
+      return;
+    }
+  } catch (error) {
+    console.error("Authorization check failed:", error);
+    ws.send(JSON.stringify({ type: "error", message: "Authorization failed" }));
     return;
   }
 
