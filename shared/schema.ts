@@ -164,6 +164,51 @@ export const selfAssessments = pgTable("self_assessments", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Collaborative Session Tables
+export const sessionNotes = pgTable("session_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  authorId: varchar("author_id").notNull(),
+  authorRole: text("author_role", { enum: ["therapist", "client"] }).notNull(),
+  content: text("content").notNull(),
+  visibility: text("visibility", { enum: ["shared", "therapist_only"] }).notNull().default("shared"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const sessionMessages = pgTable("session_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  senderRole: text("sender_role", { enum: ["therapist", "client"] }).notNull(),
+  messageType: text("message_type", { enum: ["chat", "prompt", "reflection"] }).notNull().default("chat"),
+  content: text("content").notNull(),
+  readBy: text("read_by").array().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const protocolWalkthroughs = pgTable("protocol_walkthroughs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  protocolType: text("protocol_type", { enum: ["six_fs", "witnessing", "unburdening", "letter"] }).notNull(),
+  currentStep: text("current_step").notNull(),
+  therapistPrompts: jsonb("therapist_prompts"),
+  clientResponses: jsonb("client_responses"),
+  status: text("status", { enum: ["active", "paused", "completed"] }).notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const sessionParticipants = pgTable("session_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: text("role", { enum: ["therapist", "client"] }).notNull(),
+  status: text("status", { enum: ["joined", "left"] }).notNull(),
+  joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  leftAt: timestamp("left_at"),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -236,6 +281,28 @@ export const insertSelfAssessmentSchema = createInsertSchema(selfAssessments).om
   createdAt: true,
 });
 
+export const insertSessionNoteSchema = createInsertSchema(sessionNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSessionMessageSchema = createInsertSchema(sessionMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProtocolWalkthroughSchema = createInsertSchema(protocolWalkthroughs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSessionParticipantSchema = createInsertSchema(sessionParticipants).omit({
+  id: true,
+  joinedAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -275,4 +342,12 @@ export type WoundProfile = typeof woundProfiles.$inferSelect;
 export type InsertWoundProfile = z.infer<typeof insertWoundProfileSchema>;
 export type SelfAssessment = typeof selfAssessments.$inferSelect;
 export type InsertSelfAssessment = z.infer<typeof insertSelfAssessmentSchema>;
+export type SessionNote = typeof sessionNotes.$inferSelect;
+export type InsertSessionNote = z.infer<typeof insertSessionNoteSchema>;
+export type SessionMessage = typeof sessionMessages.$inferSelect;
+export type InsertSessionMessage = z.infer<typeof insertSessionMessageSchema>;
+export type ProtocolWalkthrough = typeof protocolWalkthroughs.$inferSelect;
+export type InsertProtocolWalkthrough = z.infer<typeof insertProtocolWalkthroughSchema>;
+export type SessionParticipant = typeof sessionParticipants.$inferSelect;
+export type InsertSessionParticipant = z.infer<typeof insertSessionParticipantSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
