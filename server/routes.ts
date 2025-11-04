@@ -16,6 +16,7 @@ import {
   insertLessonProgressSchema,
   insertSessionMessageSchema,
   insertSessionNoteSchema,
+  insertDailyAnxietyCheckinSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -374,6 +375,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(entry);
     } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Daily Anxiety Check-in Routes
+  app.get("/api/anxiety-checkins", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const checkins = await storage.getDailyAnxietyCheckins(userId, limit);
+      res.json(checkins);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/anxiety-checkins", async (req: Request, res: Response) => {
+    try {
+      const checkinData = insertDailyAnxietyCheckinSchema.parse(req.body);
+      const checkin = await storage.createDailyAnxietyCheckin(checkinData);
+      res.status(201).json(checkin);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   });

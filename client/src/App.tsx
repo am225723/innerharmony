@@ -20,6 +20,7 @@ import MediaLibrary from "@/pages/MediaLibrary";
 import IFSLibrary from "@/pages/IFSLibrary";
 import IFSAnxietyLibrary from "@/pages/IFSAnxietyLibrary";
 import AnxietyPartsMapping from "@/pages/AnxietyPartsMapping";
+import DailyAnxietyCheckIn from "@/pages/DailyAnxietyCheckIn";
 import PartsDialogueJournal from "@/pages/PartsDialogueJournal";
 import NotFound from "@/pages/not-found";
 
@@ -66,6 +67,7 @@ function Router() {
       <Route path="/ifs-library" component={IFSLibrary} />
       <Route path="/ifs-anxiety" component={IFSAnxietyLibrary} />
       <Route path="/anxiety-parts-mapping" component={AnxietyPartsMapping} />
+      <Route path="/daily-anxiety-checkin" component={DailyAnxietyCheckIn} />
       <Route path="/parts-dialogue" component={PartsDialogueJournal} />
       <Route component={NotFound} />
     </Switch>

@@ -23,6 +23,8 @@ import {
   type InsertSessionMessage,
   type SessionNote,
   type InsertSessionNote,
+  type DailyAnxietyCheckin,
+  type InsertDailyAnxietyCheckin,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -77,6 +79,10 @@ export interface IStorage {
   getSessionNotes(sessionId: string): Promise<SessionNote[]>;
   createSessionNote(note: InsertSessionNote): Promise<SessionNote>;
   updateSessionNote(id: string, updates: Partial<SessionNote>): Promise<SessionNote | undefined>;
+
+  // Daily anxiety check-in methods
+  getDailyAnxietyCheckins(userId: string, limit?: number): Promise<DailyAnxietyCheckin[]>;
+  createDailyAnxietyCheckin(checkin: InsertDailyAnxietyCheckin): Promise<DailyAnxietyCheckin>;
 }
 
 export class MemStorage implements IStorage {
@@ -619,6 +625,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.sessionNotes.id, id))
       .returning();
     return updated;
+  }
+
+  // Daily anxiety check-in methods
+  async getDailyAnxietyCheckins(userId: string, limit: number = 30): Promise<DailyAnxietyCheckin[]> {
+    const results = await this.db.query.dailyAnxietyCheckins.findMany({
+      where: eq(schema.dailyAnxietyCheckins.userId, userId),
+      orderBy: (checkins, { desc }) => [desc(checkins.checkinDate)],
+      limit,
+    });
+    return results;
+  }
+
+  async createDailyAnxietyCheckin(insertCheckin: InsertDailyAnxietyCheckin): Promise<DailyAnxietyCheckin> {
+    const [checkin] = await this.db
+      .insert(schema.dailyAnxietyCheckins)
+      .values(insertCheckin)
+      .returning();
+    return checkin;
   }
 }
 

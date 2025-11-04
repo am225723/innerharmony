@@ -238,6 +238,12 @@ export default function IFSAnxietyLibrary() {
                 Explore interactive activities designed to help you understand and heal your anxiety through IFS
               </p>
               <div className="flex flex-wrap gap-3 justify-center">
+                <Button asChild data-testid="button-daily-checkin">
+                  <Link href="/daily-anxiety-checkin">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Daily Anxiety Check-In
+                  </Link>
+                </Button>
                 <Button asChild data-testid="button-anxiety-parts">
                   <Link href="/anxiety-parts-mapping">
                     <AlertCircle className="w-4 h-4 mr-2" />

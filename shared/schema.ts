@@ -318,6 +318,10 @@ export const insertSessionParticipantSchema = createInsertSchema(sessionParticip
 export const insertDailyAnxietyCheckinSchema = createInsertSchema(dailyAnxietyCheckins).omit({
   id: true,
   createdAt: true,
+}).extend({
+  checkinDate: z.union([z.date(), z.string().datetime()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
 });
 
 // Login schema
