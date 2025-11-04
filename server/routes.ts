@@ -20,6 +20,7 @@ import {
   insertBodySensationSchema,
   insertGroundingTechniqueProgressSchema,
   insertAnxietyTimelineSchema,
+  insertTherapistAssignmentSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -656,6 +657,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error) {
       console.error("Update grounding progress error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Therapist Assignment Routes
+  app.get("/api/assignments/therapist/:therapistId", async (req: Request, res: Response) => {
+    try {
+      const { therapistId } = req.params;
+      const assignments = await storage.getAssignmentsByTherapist(therapistId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Get therapist assignments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/assignments/client/:clientId", async (req: Request, res: Response) => {
+    try {
+      const { clientId } = req.params;
+      const assignments = await storage.getAssignmentsByClient(clientId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Get client assignments error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/assignments", async (req: Request, res: Response) => {
+    try {
+      const insertResult = insertTherapistAssignmentSchema.safeParse(req.body);
+      
+      if (!insertResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data", 
+          details: insertResult.error.flatten() 
+        });
+      }
+      
+      const assignment = await storage.createAssignment(insertResult.data);
+      res.json(assignment);
+    } catch (error) {
+      console.error("Create assignment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/assignments/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for update" });
+      }
+      
+      // Fetch all assignments for the user (as therapist or client) to verify ownership
+      const therapistAssignments = await storage.getAssignmentsByTherapist(userId);
+      const clientAssignments = await storage.getAssignmentsByClient(userId);
+      
+      const assignment = [...therapistAssignments, ...clientAssignments].find(a => a.id === id);
+      
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found or unauthorized" });
+      }
+      
+      // Determine role: is user the therapist or the client?
+      const isTherapist = assignment.therapistId === userId;
+      const isClient = assignment.clientId === userId;
+      
+      // Define allowed fields per role
+      let allowedUpdates: Partial<typeof assignment> = {};
+      
+      if (isTherapist) {
+        // Therapist can update: title, description, dueDate, priority, status, notes, activityType, activityId
+        const { title, description, dueDate, priority, status, notes, activityType, activityId } = req.body;
+        allowedUpdates = { title, description, dueDate, priority, status, notes, activityType, activityId };
+      } else if (isClient) {
+        // Client can ONLY update: status, notes, completedAt
+        const { status, notes, completedAt } = req.body;
+        allowedUpdates = { status, notes, completedAt };
+      } else {
+        return res.status(403).json({ error: "Unauthorized to update this assignment" });
+      }
+      
+      // Remove undefined values
+      Object.keys(allowedUpdates).forEach(key => {
+        if (allowedUpdates[key as keyof typeof allowedUpdates] === undefined) {
+          delete allowedUpdates[key as keyof typeof allowedUpdates];
+        }
+      });
+      
+      // Validate the allowed updates with partial schema
+      const partialSchema = insertTherapistAssignmentSchema.partial();
+      const validationResult = partialSchema.safeParse(allowedUpdates);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid update data", 
+          details: validationResult.error.flatten() 
+        });
+      }
+      
+      const updated = await storage.updateAssignment(id, validationResult.data);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update assignment" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update assignment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/assignments/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for deletion" });
+      }
+      
+      // Only therapist who created the assignment can delete it
+      const therapistAssignments = await storage.getAssignmentsByTherapist(userId);
+      const assignment = therapistAssignments.find(a => a.id === id);
+      
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found or unauthorized - only the therapist who created an assignment can delete it" });
+      }
+      
+      const success = await storage.deleteAssignment(id);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete assignment" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete assignment error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

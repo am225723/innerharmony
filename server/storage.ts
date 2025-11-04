@@ -31,6 +31,8 @@ import {
   type InsertGroundingTechniqueProgress,
   type AnxietyTimeline,
   type InsertAnxietyTimeline,
+  type TherapistAssignment,
+  type InsertTherapistAssignment,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -106,6 +108,13 @@ export interface IStorage {
   getGroundingTechniqueProgressByName(userId: string, techniqueName: string): Promise<GroundingTechniqueProgress | undefined>;
   createGroundingTechniqueProgress(progress: InsertGroundingTechniqueProgress): Promise<GroundingTechniqueProgress>;
   updateGroundingTechniqueProgress(id: string, updates: Partial<GroundingTechniqueProgress>): Promise<GroundingTechniqueProgress | undefined>;
+
+  // Therapist assignment methods
+  getAssignmentsByTherapist(therapistId: string): Promise<TherapistAssignment[]>;
+  getAssignmentsByClient(clientId: string): Promise<TherapistAssignment[]>;
+  createAssignment(assignment: InsertTherapistAssignment): Promise<TherapistAssignment>;
+  updateAssignment(id: string, updates: Partial<TherapistAssignment>): Promise<TherapistAssignment | undefined>;
+  deleteAssignment(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -761,6 +770,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.groundingTechniqueProgress.id, id))
       .returning();
     return updated;
+  }
+
+  // Therapist assignment methods
+  async getAssignmentsByTherapist(therapistId: string): Promise<TherapistAssignment[]> {
+    const results = await this.db.query.therapistAssignments.findMany({
+      where: eq(schema.therapistAssignments.therapistId, therapistId),
+      orderBy: (assignments, { desc }) => [desc(assignments.createdAt)],
+    });
+    return results;
+  }
+
+  async getAssignmentsByClient(clientId: string): Promise<TherapistAssignment[]> {
+    const results = await this.db.query.therapistAssignments.findMany({
+      where: eq(schema.therapistAssignments.clientId, clientId),
+      orderBy: (assignments, { desc }) => [desc(assignments.dueDate)],
+    });
+    return results;
+  }
+
+  async createAssignment(insertAssignment: InsertTherapistAssignment): Promise<TherapistAssignment> {
+    const [assignment] = await this.db
+      .insert(schema.therapistAssignments)
+      .values(insertAssignment)
+      .returning();
+    return assignment;
+  }
+
+  async updateAssignment(id: string, updates: Partial<TherapistAssignment>): Promise<TherapistAssignment | undefined> {
+    const [updated] = await this.db
+      .update(schema.therapistAssignments)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.therapistAssignments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteAssignment(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.therapistAssignments)
+      .where(eq(schema.therapistAssignments.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 

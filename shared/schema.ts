@@ -258,6 +258,23 @@ export const anxietyTimeline = pgTable("anxiety_timeline", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const therapistAssignments = pgTable("therapist_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  therapistId: varchar("therapist_id").notNull(), // Who created the assignment
+  clientId: varchar("client_id").notNull(), // Who the assignment is for
+  activityType: text("activity_type").notNull(), // Type of activity to complete (e.g., "daily_anxiety_checkin", "parts_mapping", "grounding_technique")
+  activityId: varchar("activity_id"), // Optional link to specific activity/template
+  title: text("title").notNull(), // Assignment title/name
+  description: text("description"), // Instructions or details
+  priority: text("priority", { enum: ["low", "medium", "high"] }).notNull().default("medium"),
+  dueDate: timestamp("due_date"), // When the assignment should be completed
+  status: text("status", { enum: ["assigned", "in_progress", "completed", "overdue"] }).notNull().default("assigned"),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"), // Client's notes upon completion
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -380,6 +397,16 @@ export const insertAnxietyTimelineSchema = createInsertSchema(anxietyTimeline).o
   ),
 });
 
+export const insertTherapistAssignmentSchema = createInsertSchema(therapistAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  dueDate: z.union([z.date(), z.string().datetime(), z.null(), z.undefined()]).transform(val => 
+    val && typeof val === 'string' ? new Date(val) : val
+  ).optional().nullable(),
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -435,4 +462,6 @@ export type GroundingTechniqueProgress = typeof groundingTechniqueProgress.$infe
 export type InsertGroundingTechniqueProgress = z.infer<typeof insertGroundingTechniqueProgressSchema>;
 export type AnxietyTimeline = typeof anxietyTimeline.$inferSelect;
 export type InsertAnxietyTimeline = z.infer<typeof insertAnxietyTimelineSchema>;
+export type TherapistAssignment = typeof therapistAssignments.$inferSelect;
+export type InsertTherapistAssignment = z.infer<typeof insertTherapistAssignmentSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
