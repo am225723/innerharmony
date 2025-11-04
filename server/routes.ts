@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as aiInsights from "./ai-insights";
+import { aiService } from "./ai-service";
 import {
   insertUserSchema,
   insertSessionSchema,
@@ -834,6 +835,109 @@ Provide a personalized IFS insight for this client.`;
     } catch (error) {
       console.error("AI appreciation generation error:", error);
       res.status(500).json({ error: "Failed to generate appreciation" });
+    }
+  });
+
+  // New AI Service Routes for Collaborative Features
+  app.post("/api/ai/protocol-guidance", async (req: Request, res: Response) => {
+    try {
+      const { protocolType, currentStep, userResponse } = req.body;
+      if (!protocolType || !currentStep) {
+        return res.status(400).json({ error: "protocolType and currentStep required" });
+      }
+      
+      const result = await aiService.getProtocolGuidance(protocolType, currentStep, userResponse);
+      res.json(result);
+    } catch (error) {
+      console.error("Protocol guidance error:", error);
+      res.status(500).json({ error: "Failed to get protocol guidance" });
+    }
+  });
+
+  app.post("/api/ai/parts-dialogue-analysis", async (req: Request, res: Response) => {
+    try {
+      const { dialogue, partType, userId } = req.body;
+      if (!dialogue || !userId) {
+        return res.status(400).json({ error: "dialogue and userId required" });
+      }
+      
+      const result = await aiService.analyzePartsDialogue(dialogue, partType);
+      
+      // Optionally save the analysis as an AI insight
+      if (req.body.saveInsight) {
+        await storage.createAIInsight({
+          userId,
+          context: `Parts dialogue with ${partType || "internal part"}`,
+          insight: result.analysis,
+          citations: result.citations,
+          saved: true,
+        });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Parts dialogue analysis error:", error);
+      res.status(500).json({ error: "Failed to analyze dialogue" });
+    }
+  });
+
+  app.post("/api/ai/wound-identification", async (req: Request, res: Response) => {
+    try {
+      const { description, symptoms } = req.body;
+      if (!description) {
+        return res.status(400).json({ error: "description required" });
+      }
+      
+      const result = await aiService.identifyWound(description, symptoms);
+      res.json(result);
+    } catch (error) {
+      console.error("Wound identification error:", error);
+      res.status(500).json({ error: "Failed to identify wound" });
+    }
+  });
+
+  app.post("/api/ai/unburdening-visualization-new", async (req: Request, res: Response) => {
+    try {
+      const { burden } = req.body;
+      if (!burden) {
+        return res.status(400).json({ error: "burden required" });
+      }
+      
+      const result = await aiService.getUnburdeningVisualization(burden);
+      res.json(result);
+    } catch (error) {
+      console.error("Unburdening visualization error:", error);
+      res.status(500).json({ error: "Failed to generate visualization" });
+    }
+  });
+
+  app.post("/api/ai/reparenting-phrases", async (req: Request, res: Response) => {
+    try {
+      const { woundType, exileAge, situation } = req.body;
+      if (!woundType) {
+        return res.status(400).json({ error: "woundType required" });
+      }
+      
+      const result = await aiService.getReparentingPhrases(woundType, exileAge, situation);
+      res.json(result);
+    } catch (error) {
+      console.error("Reparenting phrases error:", error);
+      res.status(500).json({ error: "Failed to generate reparenting phrases" });
+    }
+  });
+
+  app.post("/api/ai/ifs-question", async (req: Request, res: Response) => {
+    try {
+      const { question } = req.body;
+      if (!question) {
+        return res.status(400).json({ error: "question required" });
+      }
+      
+      const result = await aiService.answerIFSQuestion(question);
+      res.json(result);
+    } catch (error) {
+      console.error("IFS question error:", error);
+      res.status(500).json({ error: "Failed to answer question" });
     }
   });
 

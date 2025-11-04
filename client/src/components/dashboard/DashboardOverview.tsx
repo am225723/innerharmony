@@ -25,6 +25,7 @@ import {
   Target,
   ArrowRight,
   GraduationCap,
+  MessageSquare,
 } from "lucide-react";
 import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
 import { curriculumModules } from "@/lib/curriculumData";
@@ -348,6 +349,22 @@ export function DashboardOverview({
                 <div className="text-left flex-1">
                   <p className="font-medium">6 F's Protocol</p>
                   <p className="text-xs text-muted-foreground">Befriend your anxious parts</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/parts-dialogue">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-auto p-4 gap-3"
+                data-testid="button-parts-dialogue"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium">Parts Dialogue Journal</p>
+                  <p className="text-xs text-muted-foreground">Write dialogues with AI insights</p>
                 </div>
               </Button>
             </Link>

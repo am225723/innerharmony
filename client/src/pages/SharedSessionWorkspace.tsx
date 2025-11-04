@@ -9,9 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Send, Circle, BookOpen, Brain, Map } from 'lucide-react';
+import { Users, Send, Circle, BookOpen, Brain, Map, Heart, Sparkles, HeartCrack } from 'lucide-react';
 import { format } from 'date-fns';
 import { curriculumModules } from '@/lib/curriculumData';
+import Collaborative6Fs from '@/components/collaborative/Collaborative6Fs';
+import CollaborativeUnburdening from '@/components/collaborative/CollaborativeUnburdening';
+import WoundExploration from '@/components/collaborative/WoundExploration';
 import type { Session, SessionMessage } from '@shared/schema';
 
 export default function SharedSessionWorkspace() {
@@ -134,14 +137,26 @@ export default function SharedSessionWorkspace() {
         <Card className="lg:col-span-2 flex flex-col">
           <Tabs defaultValue="chat" className="flex flex-col flex-1">
             <CardHeader>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-5 gap-1">
                 <TabsTrigger value="chat" data-testid="tab-chat">
                   <Send className="w-4 h-4 mr-2" />
                   Chat
                 </TabsTrigger>
+                <TabsTrigger value="six-fs" data-testid="tab-six-fs">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  6 F's
+                </TabsTrigger>
+                <TabsTrigger value="unburdening" data-testid="tab-unburdening">
+                  <Heart className="w-4 h-4 mr-2" />
+                  Unburden
+                </TabsTrigger>
+                <TabsTrigger value="wounds" data-testid="tab-wounds">
+                  <HeartCrack className="w-4 h-4 mr-2" />
+                  Wounds
+                </TabsTrigger>
                 <TabsTrigger value="learning" data-testid="tab-learning">
                   <Brain className="w-4 h-4 mr-2" />
-                  Shared Learning
+                  Learning
                 </TabsTrigger>
               </TabsList>
             </CardHeader>
@@ -204,6 +219,24 @@ export default function SharedSessionWorkspace() {
                 <Send className="w-4 h-4" />
               </Button>
             </div>
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="six-fs" className="flex-1 overflow-hidden mt-0">
+              <CardContent className="h-full overflow-y-auto pt-0">
+                <Collaborative6Fs sessionId={sessionId} currentUserRole={currentUser.role} />
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="unburdening" className="flex-1 overflow-hidden mt-0">
+              <CardContent className="h-full overflow-y-auto pt-0">
+                <CollaborativeUnburdening sessionId={sessionId} currentUserRole={currentUser.role} />
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="wounds" className="flex-1 overflow-hidden mt-0">
+              <CardContent className="h-full overflow-y-auto pt-0">
+                <WoundExploration sessionId={sessionId} currentUserRole={currentUser.role} />
               </CardContent>
             </TabsContent>
 

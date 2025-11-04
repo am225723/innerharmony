@@ -18,6 +18,7 @@ import CurriculumView from "@/pages/CurriculumView";
 import SharedSessionWorkspace from "@/pages/SharedSessionWorkspace";
 import MediaLibrary from "@/pages/MediaLibrary";
 import IFSLibrary from "@/pages/IFSLibrary";
+import PartsDialogueJournal from "@/pages/PartsDialogueJournal";
 import NotFound from "@/pages/not-found";
 
 function RoleBasedDashboard() {
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/session/:sessionId" component={SharedSessionWorkspace} />
       <Route path="/media-library" component={MediaLibrary} />
       <Route path="/ifs-library" component={IFSLibrary} />
+      <Route path="/parts-dialogue" component={PartsDialogueJournal} />
       <Route component={NotFound} />
     </Switch>
   );
