@@ -21,6 +21,8 @@ import {
   insertGroundingTechniqueProgressSchema,
   insertAnxietyTimelineSchema,
   insertTherapistAssignmentSchema,
+  insertSessionGoalSchema,
+  insertTherapistNoteSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -798,6 +800,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       console.error("Delete assignment error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Session Goals Routes
+  app.get("/api/goals/therapist/:therapistId", async (req: Request, res: Response) => {
+    try {
+      const { therapistId } = req.params;
+      const goals = await storage.getGoalsByTherapist(therapistId);
+      res.json(goals);
+    } catch (error) {
+      console.error("Get therapist goals error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/goals/client/:clientId", async (req: Request, res: Response) => {
+    try {
+      const { clientId } = req.params;
+      const goals = await storage.getGoalsByClient(clientId);
+      res.json(goals);
+    } catch (error) {
+      console.error("Get client goals error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/goals", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for creation" });
+      }
+      
+      const insertResult = insertSessionGoalSchema.safeParse(req.body);
+      
+      if (!insertResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data", 
+          details: insertResult.error.flatten() 
+        });
+      }
+      
+      // Validate that the caller is the therapist creating the goal
+      if (insertResult.data.therapistId !== userId) {
+        return res.status(403).json({ error: "Unauthorized - can only create goals as yourself" });
+      }
+      
+      const goal = await storage.createGoal(insertResult.data);
+      res.json(goal);
+    } catch (error) {
+      console.error("Create goal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/goals/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for update" });
+      }
+      
+      // Fetch goals to verify ownership
+      const therapistGoals = await storage.getGoalsByTherapist(userId);
+      const clientGoals = await storage.getGoalsByClient(userId);
+      
+      const goal = [...therapistGoals, ...clientGoals].find(g => g.id === id);
+      
+      if (!goal) {
+        return res.status(404).json({ error: "Goal not found or unauthorized" });
+      }
+      
+      // Determine role
+      const isTherapist = goal.therapistId === userId;
+      const isClient = goal.clientId === userId;
+      
+      // Define allowed fields per role
+      let allowedUpdates: Partial<typeof goal> = {};
+      
+      if (isTherapist) {
+        // Therapist can update all fields except immutable ones
+        const { goalText, category, targetDate, status, progress, clientNotes, therapistNotes } = req.body;
+        allowedUpdates = { goalText, category, targetDate, status, progress, clientNotes, therapistNotes };
+      } else if (isClient) {
+        // Client can ONLY update: progress, status, clientNotes
+        const { progress, status, clientNotes } = req.body;
+        allowedUpdates = { progress, status, clientNotes };
+      } else {
+        return res.status(403).json({ error: "Unauthorized to update this goal" });
+      }
+      
+      // Remove undefined values
+      Object.keys(allowedUpdates).forEach(key => {
+        if (allowedUpdates[key as keyof typeof allowedUpdates] === undefined) {
+          delete allowedUpdates[key as keyof typeof allowedUpdates];
+        }
+      });
+      
+      // Validate with partial schema
+      const partialSchema = insertSessionGoalSchema.partial();
+      const validationResult = partialSchema.safeParse(allowedUpdates);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid update data", 
+          details: validationResult.error.flatten() 
+        });
+      }
+      
+      const updated = await storage.updateGoal(id, validationResult.data);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update goal" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update goal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/goals/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for deletion" });
+      }
+      
+      // Only therapist who created the goal can delete it
+      const therapistGoals = await storage.getGoalsByTherapist(userId);
+      const goal = therapistGoals.find(g => g.id === id);
+      
+      if (!goal) {
+        return res.status(404).json({ error: "Goal not found or unauthorized - only the therapist who created a goal can delete it" });
+      }
+      
+      const success = await storage.deleteGoal(id);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete goal" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete goal error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Therapist Notes Routes
+  app.get("/api/notes/therapist/:therapistId", async (req: Request, res: Response) => {
+    try {
+      const { therapistId } = req.params;
+      const notes = await storage.getNotesByTherapist(therapistId);
+      res.json(notes);
+    } catch (error) {
+      console.error("Get therapist notes error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/notes/client/:therapistId/:clientId", async (req: Request, res: Response) => {
+    try {
+      const { therapistId, clientId } = req.params;
+      const notes = await storage.getNotesByClient(therapistId, clientId);
+      res.json(notes);
+    } catch (error) {
+      console.error("Get client notes error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.get("/api/notes/search", async (req: Request, res: Response) => {
+    try {
+      const therapistId = req.query.therapistId as string;
+      const searchTerm = req.query.q as string || "";
+      const clientId = req.query.clientId as string | undefined;
+      const tags = req.query.tags ? (req.query.tags as string).split(',') : undefined;
+      
+      if (!therapistId) {
+        return res.status(400).json({ error: "therapistId required" });
+      }
+      
+      const notes = await storage.searchNotes(therapistId, searchTerm, { clientId, tags });
+      res.json(notes);
+    } catch (error) {
+      console.error("Search notes error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/notes", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for creation" });
+      }
+      
+      const insertResult = insertTherapistNoteSchema.safeParse(req.body);
+      
+      if (!insertResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data", 
+          details: insertResult.error.flatten() 
+        });
+      }
+      
+      // Validate that the caller is the therapist creating the note
+      if (insertResult.data.therapistId !== userId) {
+        return res.status(403).json({ error: "Unauthorized - can only create notes as yourself" });
+      }
+      
+      const note = await storage.createNote(insertResult.data);
+      res.json(note);
+    } catch (error) {
+      console.error("Create note error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/notes/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for update" });
+      }
+      
+      // Verify therapist ownership
+      const therapistNotes = await storage.getNotesByTherapist(userId);
+      const note = therapistNotes.find(n => n.id === id);
+      
+      if (!note) {
+        return res.status(404).json({ error: "Note not found or unauthorized - only the therapist who created a note can update it" });
+      }
+      
+      // Therapist can update all fields except immutable ones
+      const { clientId, sessionId, sessionDate, noteContent, taggedPartIds, tags, isPrivate } = req.body;
+      const allowedUpdates = { clientId, sessionId, sessionDate, noteContent, taggedPartIds, tags, isPrivate };
+      
+      // Remove undefined values
+      Object.keys(allowedUpdates).forEach(key => {
+        if (allowedUpdates[key as keyof typeof allowedUpdates] === undefined) {
+          delete allowedUpdates[key as keyof typeof allowedUpdates];
+        }
+      });
+      
+      // Validate with partial schema
+      const partialSchema = insertTherapistNoteSchema.partial();
+      const validationResult = partialSchema.safeParse(allowedUpdates);
+      
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid update data", 
+          details: validationResult.error.flatten() 
+        });
+      }
+      
+      const updated = await storage.updateNote(id, validationResult.data);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update note" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update note error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/notes/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for deletion" });
+      }
+      
+      // Only therapist who created the note can delete it
+      const therapistNotes = await storage.getNotesByTherapist(userId);
+      const note = therapistNotes.find(n => n.id === id);
+      
+      if (!note) {
+        return res.status(404).json({ error: "Note not found or unauthorized - only the therapist who created a note can delete it" });
+      }
+      
+      const success = await storage.deleteNote(id);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete note" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete note error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

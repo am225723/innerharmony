@@ -275,6 +275,35 @@ export const therapistAssignments = pgTable("therapist_assignments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const sessionGoals = pgTable("session_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  therapistId: varchar("therapist_id").notNull(), // Who created the goal
+  clientId: varchar("client_id").notNull(), // Who the goal is for
+  goalText: text("goal_text").notNull(), // The goal description
+  category: text("category", { enum: ["self_leadership", "parts_work", "unburdening", "daily_practice", "relationship", "emotional_regulation", "trauma_healing", "other"] }).notNull().default("other"),
+  targetDate: timestamp("target_date"), // Optional target completion date
+  status: text("status", { enum: ["not_started", "in_progress", "achieved", "revised"] }).notNull().default("not_started"),
+  progress: integer("progress").notNull().default(0), // 0-100 percentage
+  clientNotes: text("client_notes"), // Client's reflections on progress
+  therapistNotes: text("therapist_notes"), // Therapist's notes on goal
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const therapistNotes = pgTable("therapist_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  therapistId: varchar("therapist_id").notNull(), // Who created the note
+  clientId: varchar("client_id"), // Optional - which client the note is about
+  sessionId: varchar("session_id"), // Optional - link to specific session
+  sessionDate: timestamp("session_date").notNull(), // When the session occurred
+  noteContent: text("note_content").notNull(), // The actual note content
+  taggedPartIds: text("tagged_part_ids").array().default(sql`ARRAY[]::text[]`), // Part IDs mentioned in note
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`), // Custom tags for categorization/search
+  isPrivate: boolean("is_private").notNull().default(true), // Whether note is private to therapist
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -407,6 +436,26 @@ export const insertTherapistAssignmentSchema = createInsertSchema(therapistAssig
   ).optional().nullable(),
 });
 
+export const insertSessionGoalSchema = createInsertSchema(sessionGoals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  targetDate: z.union([z.date(), z.string().datetime(), z.null(), z.undefined()]).transform(val => 
+    val && typeof val === 'string' ? new Date(val) : val
+  ).optional().nullable(),
+});
+
+export const insertTherapistNoteSchema = createInsertSchema(therapistNotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  sessionDate: z.union([z.date(), z.string().datetime()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -464,4 +513,8 @@ export type AnxietyTimeline = typeof anxietyTimeline.$inferSelect;
 export type InsertAnxietyTimeline = z.infer<typeof insertAnxietyTimelineSchema>;
 export type TherapistAssignment = typeof therapistAssignments.$inferSelect;
 export type InsertTherapistAssignment = z.infer<typeof insertTherapistAssignmentSchema>;
+export type SessionGoal = typeof sessionGoals.$inferSelect;
+export type InsertSessionGoal = z.infer<typeof insertSessionGoalSchema>;
+export type TherapistNote = typeof therapistNotes.$inferSelect;
+export type InsertTherapistNote = z.infer<typeof insertTherapistNoteSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;

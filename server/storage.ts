@@ -33,6 +33,10 @@ import {
   type InsertAnxietyTimeline,
   type TherapistAssignment,
   type InsertTherapistAssignment,
+  type SessionGoal,
+  type InsertSessionGoal,
+  type TherapistNote,
+  type InsertTherapistNote,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -115,6 +119,21 @@ export interface IStorage {
   createAssignment(assignment: InsertTherapistAssignment): Promise<TherapistAssignment>;
   updateAssignment(id: string, updates: Partial<TherapistAssignment>): Promise<TherapistAssignment | undefined>;
   deleteAssignment(id: string): Promise<boolean>;
+
+  // Session goals methods
+  getGoalsByTherapist(therapistId: string): Promise<SessionGoal[]>;
+  getGoalsByClient(clientId: string): Promise<SessionGoal[]>;
+  createGoal(goal: InsertSessionGoal): Promise<SessionGoal>;
+  updateGoal(id: string, updates: Partial<SessionGoal>): Promise<SessionGoal | undefined>;
+  deleteGoal(id: string): Promise<boolean>;
+
+  // Therapist notes methods
+  getNotesByTherapist(therapistId: string): Promise<TherapistNote[]>;
+  getNotesByClient(therapistId: string, clientId: string): Promise<TherapistNote[]>;
+  createNote(note: InsertTherapistNote): Promise<TherapistNote>;
+  updateNote(id: string, updates: Partial<TherapistNote>): Promise<TherapistNote | undefined>;
+  deleteNote(id: string): Promise<boolean>;
+  searchNotes(therapistId: string, searchTerm: string, filters?: { clientId?: string; tags?: string[] }): Promise<TherapistNote[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -338,7 +357,7 @@ export class MemStorage implements IStorage {
 
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
-import { eq } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import ws from "ws";
 
@@ -812,6 +831,120 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.therapistAssignments.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  // Session goals methods
+  async getGoalsByTherapist(therapistId: string): Promise<SessionGoal[]> {
+    const results = await this.db.query.sessionGoals.findMany({
+      where: eq(schema.sessionGoals.therapistId, therapistId),
+      orderBy: (goals, { desc }) => [desc(goals.createdAt)],
+    });
+    return results;
+  }
+
+  async getGoalsByClient(clientId: string): Promise<SessionGoal[]> {
+    const results = await this.db.query.sessionGoals.findMany({
+      where: eq(schema.sessionGoals.clientId, clientId),
+      orderBy: (goals, { asc }) => [asc(goals.targetDate)],
+    });
+    return results;
+  }
+
+  async createGoal(insertGoal: InsertSessionGoal): Promise<SessionGoal> {
+    const [goal] = await this.db
+      .insert(schema.sessionGoals)
+      .values(insertGoal)
+      .returning();
+    return goal;
+  }
+
+  async updateGoal(id: string, updates: Partial<SessionGoal>): Promise<SessionGoal | undefined> {
+    const [updated] = await this.db
+      .update(schema.sessionGoals)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.sessionGoals.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteGoal(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.sessionGoals)
+      .where(eq(schema.sessionGoals.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Therapist notes methods
+  async getNotesByTherapist(therapistId: string): Promise<TherapistNote[]> {
+    const results = await this.db.query.therapistNotes.findMany({
+      where: eq(schema.therapistNotes.therapistId, therapistId),
+      orderBy: (notes, { desc }) => [desc(notes.sessionDate)],
+    });
+    return results;
+  }
+
+  async getNotesByClient(therapistId: string, clientId: string): Promise<TherapistNote[]> {
+    const results = await this.db.query.therapistNotes.findMany({
+      where: and(
+        eq(schema.therapistNotes.therapistId, therapistId),
+        eq(schema.therapistNotes.clientId, clientId)
+      ),
+      orderBy: (notes, { desc }) => [desc(notes.sessionDate)],
+    });
+    return results;
+  }
+
+  async createNote(insertNote: InsertTherapistNote): Promise<TherapistNote> {
+    const [note] = await this.db
+      .insert(schema.therapistNotes)
+      .values(insertNote)
+      .returning();
+    return note;
+  }
+
+  async updateNote(id: string, updates: Partial<TherapistNote>): Promise<TherapistNote | undefined> {
+    const [updated] = await this.db
+      .update(schema.therapistNotes)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(schema.therapistNotes.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteNote(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.therapistNotes)
+      .where(eq(schema.therapistNotes.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async searchNotes(therapistId: string, searchTerm: string, filters?: { clientId?: string; tags?: string[] }): Promise<TherapistNote[]> {
+    const conditions = [eq(schema.therapistNotes.therapistId, therapistId)];
+    
+    if (searchTerm) {
+      conditions.push(ilike(schema.therapistNotes.noteContent, `%${searchTerm}%`));
+    }
+    
+    if (filters?.clientId) {
+      conditions.push(eq(schema.therapistNotes.clientId, filters.clientId));
+    }
+    
+    const results = await this.db.query.therapistNotes.findMany({
+      where: and(...conditions),
+      orderBy: (notes, { desc }) => [desc(notes.sessionDate)],
+    });
+    
+    // Filter by tags if provided (array contains operation)
+    if (filters?.tags && filters.tags.length > 0) {
+      return results.filter(note => {
+        if (!note.tags) return false;
+        return filters.tags!.some(tag => note.tags.includes(tag));
+      });
+    }
+    
+    return results;
   }
 }
 
