@@ -165,7 +165,7 @@ export const fiveChildhoodWounds = [
       }
     ],
     healingPath: "The exile needs to know it has power now. It needs to know its voice matters and that your Self will protect it.",
-    reparentingExercise": "Go to the memory of injustice. As your adult Self, step in and say: 'This was wrong. This should not have happened to you. You are powerful now. I will protect you.'"
+    reparentingExercise: "Go to the memory of injustice. As your adult Self, step in and say: 'This was wrong. This should not have happened to you. You are powerful now. I will protect you.'"
   },
   {
     id: "wound-betrayal",
