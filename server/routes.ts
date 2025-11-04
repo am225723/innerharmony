@@ -247,7 +247,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sessionId: partData.sessionId || null,
           type: "parts_mapping",
           title: "Parts Mapping",
-          description: "Visualizing internal parts system",
           status: "in_progress",
           data: {},
         });
@@ -353,7 +352,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sessionId: entryData.sessionId || null,
           type: activityType as any,
           title: activityTitle,
-          description: `Completed ${activityTitle}`,
           status: "completed",
           data: { journalEntryId: entry.id },
         });
@@ -447,7 +445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ).join('\n');
       
       const journalContext = journalEntries.slice(0, 3).map(j => 
-        `${j.protocol}: ${j.responses?.find ? 'Completed' : 'In progress'}`
+        `${j.protocol}: ${typeof j.responses === 'object' && j.responses ? 'Completed' : 'In progress'}`
       ).join('\n');
 
       const systemPrompt = `You are a compassionate Internal Family Systems (IFS) therapy guide. Based on the client's parts and therapeutic work, provide a brief, personalized insight (2-3 paragraphs) that:
@@ -938,6 +936,26 @@ Provide a personalized IFS insight for this client.`;
     } catch (error) {
       console.error("IFS question error:", error);
       res.status(500).json({ error: "Failed to answer question" });
+    }
+  });
+
+  app.post("/api/ai/part-conversation", async (req: Request, res: Response) => {
+    try {
+      const { partType, userMessage, conversationHistory, partName } = req.body;
+      if (!partType || !userMessage) {
+        return res.status(400).json({ error: "partType and userMessage required" });
+      }
+      
+      const result = await aiService.respondAsPart(
+        partType,
+        userMessage,
+        conversationHistory || [],
+        partName
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Part conversation error:", error);
+      res.status(500).json({ error: "Failed to respond as part" });
     }
   });
 

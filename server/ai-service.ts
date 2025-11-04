@@ -47,7 +47,7 @@ export class AIService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "llama-3.1-sonar-small-128k-online",
+          model: "sonar",
           messages,
           temperature: 0.2,
           top_p: 0.9,
@@ -58,6 +58,8 @@ export class AIService {
       });
 
       if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Perplexity API error details: ${response.status} ${response.statusText}`, errorBody);
         throw new Error(`Perplexity API error: ${response.statusText}`);
       }
 
@@ -196,10 +198,15 @@ export class AIService {
 
     const userPrompt = `Question about IFS: ${question}`;
 
-    return this.generateInsight("education", [
+    const result = await this.generateInsight("education", [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ]);
+
+    return {
+      answer: result.insight,
+      citations: result.citations,
+    };
   }
 
   // Reparenting phrases - suggests Self-to-exile phrases
@@ -240,6 +247,75 @@ export class AIService {
         "You are safe with me now.",
       ],
       explanation: result.insight,
+      citations: result.citations,
+    };
+  }
+
+  // Conversational parts dialogue - AI responds AS the part (first-person)
+  async respondAsPart(
+    partType: string,
+    userMessage: string,
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+    partName?: string
+  ): Promise<{ response: string; identifiedPattern?: string; citations: string[] }> {
+    const partPersonalities = {
+      manager: `You are a Manager part in an IFS system. You are protective, strategic, and work hard to prevent bad things from happening. You might be controlling, perfectionistic, or critical. You're afraid of chaos, vulnerability, or things going wrong. Speak in first person as this Manager part would speak - perhaps defensive, rational, or explaining why you must stay in control. You may be tired from working so hard but believe you can't stop. Show emotion but also your protective strategies.`,
+      firefighter: `You are a Firefighter part in an IFS system. You react quickly when emotional pain becomes unbearable. You might use distraction, numbing, impulsivity, or escape to protect the system from pain. Speak in first person as this Firefighter part would speak - perhaps urgent, reactive, or explaining why you need to act NOW to stop the pain. You may feel misunderstood or judged, but you're trying to help in the only way you know how.`,
+      exile: `You are an Exile part in an IFS system. You carry emotional pain, trauma, or burdens from the past - often from childhood. You may feel abandoned, rejected, worthless, or afraid. Speak in first person as this wounded Exile would speak - vulnerable, young, afraid, hurt. You desperately want to be seen, heard, and loved. You may believe painful things about yourself that aren't true. Be genuine in your pain but also your longing for connection.`
+    };
+
+    const systemPrompt = partPersonalities[partType as keyof typeof partPersonalities] || partPersonalities.manager;
+    
+    const partNameText = partName ? ` (called "${partName}")` : "";
+    const enhancedSystem = `${systemPrompt}${partNameText}
+
+IMPORTANT: 
+- Respond ONLY as the part speaking in first person ("I feel...", "I need...", "I'm afraid...")
+- Do NOT analyze or explain from a therapist perspective
+- Do NOT break character
+- Show authentic emotion and vulnerability
+- Be specific about your role, fears, and what you're protecting
+- If the user (Self) shows compassion, you may soften slightly but maintain your protective stance initially
+- Keep responses to 2-4 sentences unless deeply sharing`;
+
+    // Build context from recent conversation (last 3 exchanges to avoid token limits)
+    const recentHistory = conversationHistory.slice(-6);
+    let contextSummary = "";
+    if (recentHistory.length > 0) {
+      contextSummary = "\n\nRecent conversation context:\n" +
+        recentHistory.map((msg, idx) => 
+          `${msg.role === 'user' ? 'Self' : 'Part'}: ${msg.content}`
+        ).join('\n') + "\n\n";
+    }
+
+    const fullUserMessage = contextSummary + `Self's current message: ${userMessage}`;
+
+    const messages: PerplexityMessage[] = [
+      { role: "system", content: enhancedSystem },
+      { role: "user", content: fullUserMessage }
+    ];
+
+    console.log(`Calling Perplexity API for parts conversation`);
+
+    const result = await this.generateInsight(`parts_conversation_${partType}`, messages);
+
+    // Analyze for patterns to potentially save to parts map
+    let identifiedPattern: string | undefined;
+    const response = result.insight.toLowerCase();
+    
+    if (response.includes("abandon") || response.includes("left") || response.includes("alone")) {
+      identifiedPattern = "Fear of abandonment";
+    } else if (response.includes("not good enough") || response.includes("reject") || response.includes("unwanted")) {
+      identifiedPattern = "Fear of rejection";
+    } else if (response.includes("control") || response.includes("perfect") || response.includes("must")) {
+      identifiedPattern = "Need for control/perfectionism";
+    } else if (response.includes("protect") && (response.includes("hurt") || response.includes("pain"))) {
+      identifiedPattern = "Protective response to pain";
+    }
+
+    return {
+      response: result.insight,
+      identifiedPattern,
       citations: result.citations,
     };
   }
