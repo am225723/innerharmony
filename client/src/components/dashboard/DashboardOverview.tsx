@@ -245,6 +245,22 @@ export function DashboardOverview({
               </Button>
             </Link>
 
+            <Link href="/curriculum">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-auto p-4 gap-3"
+                data-testid="button-curriculum"
+              >
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Brain className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium">IFS Curriculum</p>
+                  <p className="text-xs text-muted-foreground">Comprehensive Learn → Activity → Result modules</p>
+                </div>
+              </Button>
+            </Link>
+
             <Link href="/lessons">
               <Button
                 variant="outline"
