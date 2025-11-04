@@ -27,6 +27,8 @@ import {
   type InsertDailyAnxietyCheckin,
   type BodySensation,
   type InsertBodySensation,
+  type AnxietyTimeline,
+  type InsertAnxietyTimeline,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -90,6 +92,12 @@ export interface IStorage {
   getBodySensations(userId: string): Promise<BodySensation[]>;
   createBodySensation(sensation: InsertBodySensation): Promise<BodySensation>;
   deleteBodySensation(id: string): Promise<boolean>;
+
+  // Anxiety timeline methods
+  getAnxietyTimeline(userId: string): Promise<AnxietyTimeline[]>;
+  createTimelineEvent(event: InsertAnxietyTimeline): Promise<AnxietyTimeline>;
+  updateTimelineEvent(id: string, updates: Partial<AnxietyTimeline>): Promise<AnxietyTimeline | undefined>;
+  deleteTimelineEvent(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -673,6 +681,40 @@ export class DatabaseStorage implements IStorage {
     const result = await this.db
       .delete(schema.bodySensations)
       .where(eq(schema.bodySensations.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Anxiety timeline methods
+  async getAnxietyTimeline(userId: string): Promise<AnxietyTimeline[]> {
+    const results = await this.db.query.anxietyTimeline.findMany({
+      where: eq(schema.anxietyTimeline.userId, userId),
+      orderBy: (timeline, { desc }) => [desc(timeline.eventDate)],
+    });
+    return results;
+  }
+
+  async createTimelineEvent(insertEvent: InsertAnxietyTimeline): Promise<AnxietyTimeline> {
+    const [event] = await this.db
+      .insert(schema.anxietyTimeline)
+      .values(insertEvent)
+      .returning();
+    return event;
+  }
+
+  async updateTimelineEvent(id: string, updates: Partial<AnxietyTimeline>): Promise<AnxietyTimeline | undefined> {
+    const [updated] = await this.db
+      .update(schema.anxietyTimeline)
+      .set(updates)
+      .where(eq(schema.anxietyTimeline.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteTimelineEvent(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.anxietyTimeline)
+      .where(eq(schema.anxietyTimeline.id, id))
       .returning();
     return result.length > 0;
   }

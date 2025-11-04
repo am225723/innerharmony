@@ -16,7 +16,8 @@ import {
   Lightbulb,
   AlertCircle,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Clock
 } from 'lucide-react';
 import { ifsAnxietyKnowledge, groundingTechniques } from '@/lib/ifsAnxietyKnowledge';
 
@@ -254,6 +255,12 @@ export default function IFSAnxietyLibrary() {
                   <Link href="/body-sensations-map">
                     <Sparkles className="w-4 h-4 mr-2" />
                     Body Sensations Map
+                  </Link>
+                </Button>
+                <Button asChild data-testid="button-anxiety-timeline">
+                  <Link href="/anxiety-timeline">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Anxiety Timeline
                   </Link>
                 </Button>
                 <Button variant="outline" asChild data-testid="button-parts-dialogue">

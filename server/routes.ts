@@ -18,6 +18,7 @@ import {
   insertSessionNoteSchema,
   insertDailyAnxietyCheckinSchema,
   insertBodySensationSchema,
+  insertAnxietyTimelineSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -467,6 +468,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!success) {
         return res.status(500).json({ error: "Failed to delete sensation" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Anxiety Timeline Routes
+  app.get("/api/anxiety-timeline", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const timeline = await storage.getAnxietyTimeline(userId);
+      res.json(timeline);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/anxiety-timeline", async (req: Request, res: Response) => {
+    try {
+      const eventData = insertAnxietyTimelineSchema.parse(req.body);
+      
+      if (!eventData.userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const event = await storage.createTimelineEvent(eventData);
+      res.status(201).json(event);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/anxiety-timeline/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for update" });
+      }
+      
+      // Verify ownership before update
+      const timeline = await storage.getAnxietyTimeline(userId);
+      const event = timeline.find(e => e.id === id);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Timeline event not found or unauthorized" });
+      }
+      
+      const updated = await storage.updateTimelineEvent(id, req.body);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update event" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/anxiety-timeline/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for deletion" });
+      }
+      
+      // Verify ownership before deletion
+      const timeline = await storage.getAnxietyTimeline(userId);
+      const event = timeline.find(e => e.id === id);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Timeline event not found or unauthorized" });
+      }
+      
+      const success = await storage.deleteTimelineEvent(id);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete event" });
       }
       
       res.json({ success: true });
