@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
+import { curriculumModules } from "@/lib/curriculumData";
 
 interface DashboardOverviewProps {
   user: User;
@@ -41,11 +43,34 @@ export function DashboardOverview({
   onViewActivity,
 }: DashboardOverviewProps) {
   const { toast } = useToast();
+  const [curriculumProgress, setCurriculumProgress] = useState(0);
+  
   const activeSessions = sessions.filter(s => s.status === "active");
   const completedActivities = activities.filter(a => a.status === "completed");
-  const completionRate = activities.length > 0 
+  const activityCompletionRate = activities.length > 0 
     ? Math.round((completedActivities.length / activities.length) * 100) 
     : 0;
+
+  // Load curriculum progress from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(`curriculum-progress-${user.id}`);
+    if (stored) {
+      try {
+        const completedModules = JSON.parse(stored);
+        const totalModules = curriculumModules.length;
+        const progress = totalModules > 0 
+          ? Math.round((completedModules.length / totalModules) * 100)
+          : 0;
+        setCurriculumProgress(progress);
+      } catch (error) {
+        console.error('Failed to load curriculum progress:', error);
+        setCurriculumProgress(0);
+      }
+    }
+  }, [user.id]);
+
+  // Calculate overall journey progress combining activities and curriculum
+  const journeyProgress = Math.round((activityCompletionRate + curriculumProgress) / 2);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -105,7 +130,7 @@ export function DashboardOverview({
           <CardContent>
             <div className="text-3xl font-display font-semibold">{completedActivities.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {completionRate}% completion rate
+              {activityCompletionRate}% completion rate
             </p>
           </CardContent>
         </Card>
@@ -129,8 +154,11 @@ export function DashboardOverview({
             <Brain className="w-4 h-4 text-secondary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-display font-semibold">{completionRate}%</div>
-            <Progress value={completionRate} className="mt-2 h-2" />
+            <div className="text-3xl font-display font-semibold">{journeyProgress}%</div>
+            <Progress value={journeyProgress} className="mt-2 h-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              Curriculum: {curriculumProgress}% • Activities: {activityCompletionRate}%
+            </p>
           </CardContent>
         </Card>
       </div>
