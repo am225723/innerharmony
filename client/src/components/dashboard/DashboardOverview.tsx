@@ -21,9 +21,14 @@ import {
   Shield,
   Plus,
   Loader2,
+  Lightbulb,
+  Target,
+  ArrowRight,
+  GraduationCap,
 } from "lucide-react";
 import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
 import { curriculumModules } from "@/lib/curriculumData";
+import { eightCsOfSelf, dailyIFSPractices, fiveChildhoodWounds, ifsFoundations } from "@/lib/ifsKnowledge";
 
 interface DashboardOverviewProps {
   user: User;
@@ -95,6 +100,41 @@ export function DashboardOverview({
     }
   };
 
+  // Get daily insight (rotates based on day of year)
+  const getDailyInsight = () => {
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
+    const insights = [
+      {
+        title: "Practice Self-Energy Today",
+        content: "When you notice a part activating, pause and ask: 'How do I feel TOWARD this part?' If you notice judgment, ask that judging part to step back so you can be curious instead.",
+        cQuality: "Curiosity"
+      },
+      {
+        title: "All Parts Are Welcome",
+        content: "There are no bad parts. Even your inner critic is trying to protect you. Today, thank one of your protector parts for working so hard on your behalf.",
+        cQuality: "Compassion"
+      },
+      {
+        title: "You Are Not Your Parts",
+        content: "Remember: You have parts, but you are not your parts. Your core Self is whole, undamaged, and naturally wise. Parts can be healed, but Self is already complete.",
+        cQuality: "Clarity"
+      },
+      {
+        title: "Small Steps of Healing",
+        content: "Healing doesn't require dramatic breakthroughs. Simply noticing a part, being curious about it, and listening to it with compassion is powerful healing work.",
+        cQuality: "Calm"
+      },
+      {
+        title: "Trust Your System",
+        content: "Your internal system will only open up at the pace it feels safe. There's no rush. Progress isn't linear. Trust the process and be patient with yourself.",
+        cQuality: "Confidence"
+      }
+    ];
+    return insights[dayOfYear % insights.length];
+  };
+
+  const dailyInsight = getDailyInsight();
+
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto">
       {/* Welcome Section */}
@@ -103,11 +143,50 @@ export function DashboardOverview({
           Welcome back, {user.displayName.split(" ")[0]}
         </h1>
         <p className="text-lg text-muted-foreground">
-          Continue your journey of compassionate self-discovery
+          Continue your journey of compassionate self-discovery through learning and healing
         </p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Daily Insight - Featured at Top */}
+      <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-secondary/5" data-testid="card-daily-insight">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Lightbulb className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Today's IFS Insight</CardTitle>
+                <CardDescription>Daily wisdom for your healing journey</CardDescription>
+              </div>
+            </div>
+            <Badge variant="secondary" className="gap-1">
+              <Sparkles className="w-3 h-3" />
+              {dailyInsight.cQuality}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <h3 className="font-semibold text-lg">{dailyInsight.title}</h3>
+          <p className="text-muted-foreground leading-relaxed">
+            {dailyInsight.content}
+          </p>
+          <div className="flex gap-2">
+            <Link href="/ifs-library">
+              <Button variant="outline" size="sm" data-testid="button-explore-library">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Explore IFS Library
+              </Button>
+            </Link>
+            <Button variant="outline" size="sm" data-testid="button-daily-practice">
+              <Target className="w-4 h-4 mr-2" />
+              Today's Practice
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Learning Progress Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-active-sessions">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
