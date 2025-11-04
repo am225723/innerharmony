@@ -56,7 +56,13 @@ export default function Curriculum() {
   useEffect(() => {
     const stored = localStorage.getItem(`curriculum-progress-${user?.id}`);
     if (stored) {
-      setCompletedModules(JSON.parse(stored));
+      try {
+        setCompletedModules(JSON.parse(stored));
+      } catch (error) {
+        console.error('Failed to load curriculum progress:', error);
+        localStorage.removeItem(`curriculum-progress-${user?.id}`);
+        setCompletedModules([]);
+      }
     }
   }, [user?.id]);
 

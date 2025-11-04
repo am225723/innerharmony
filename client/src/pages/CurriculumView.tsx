@@ -48,6 +48,39 @@ export default function CurriculumView() {
     }
   }, [setLocation]);
 
+  // Load module progress from localStorage
+  useEffect(() => {
+    if (user?.id && moduleId) {
+      const progressKey = `module-progress-${user.id}-${moduleId}`;
+      const stored = localStorage.getItem(progressKey);
+      if (stored) {
+        try {
+          const { stepIndex, completed, responses } = JSON.parse(stored);
+          setCurrentStepIndex(stepIndex || 0);
+          setCompletedSteps(new Set(completed || []));
+          setActivityResponses(responses || {});
+        } catch (error) {
+          console.error('Failed to load module progress:', error);
+          // Clear corrupted data
+          localStorage.removeItem(progressKey);
+        }
+      }
+    }
+  }, [user?.id, moduleId]);
+
+  // Save module progress to localStorage whenever it changes
+  useEffect(() => {
+    if (user?.id && moduleId) {
+      const progressKey = `module-progress-${user.id}-${moduleId}`;
+      const progressData = {
+        stepIndex: currentStepIndex,
+        completed: Array.from(completedSteps),
+        responses: activityResponses,
+      };
+      localStorage.setItem(progressKey, JSON.stringify(progressData));
+    }
+  }, [user?.id, moduleId, currentStepIndex, completedSteps, activityResponses]);
+
   const handleLogout = () => {
     localStorage.removeItem("user");
     setLocation("/login");
@@ -75,11 +108,39 @@ export default function CurriculumView() {
   const canGoPrevious = currentStepIndex > 0;
 
   const handleCompleteStep = () => {
-    setCompletedSteps(prev => new Set(prev).add(currentStepIndex));
+    const newCompletedSteps = new Set(completedSteps).add(currentStepIndex);
+    setCompletedSteps(newCompletedSteps);
     
-    if (currentStep.type === "result") {
+    // Check if this was the last step in the module
+    const isLastStep = currentStepIndex === module.steps.length - 1;
+    
+    if (isLastStep && currentStep.type === "result") {
+      // Mark the entire module as completed
+      const storageKey = `curriculum-progress-${user.id}`;
+      const existingProgress = localStorage.getItem(storageKey);
+      let completedModules: string[] = [];
+      
+      if (existingProgress) {
+        try {
+          completedModules = JSON.parse(existingProgress);
+        } catch (error) {
+          console.error('Failed to load curriculum progress:', error);
+          localStorage.removeItem(storageKey);
+        }
+      }
+      
+      if (!completedModules.includes(moduleId)) {
+        const updatedProgress = [...completedModules, moduleId];
+        localStorage.setItem(storageKey, JSON.stringify(updatedProgress));
+        
+        toast({
+          title: "Module Completed!",
+          description: "Congratulations! You've finished this module. Your progress has been saved.",
+        });
+      }
+    } else if (currentStep.type === "result") {
       toast({
-        title: "Module Section Completed!",
+        title: "Section Completed!",
         description: "You've completed this part of your learning journey.",
       });
     }
