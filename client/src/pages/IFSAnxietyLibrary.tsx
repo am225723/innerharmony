@@ -263,6 +263,12 @@ export default function IFSAnxietyLibrary() {
                     Anxiety Timeline
                   </Link>
                 </Button>
+                <Button asChild data-testid="button-wound-explorer">
+                  <Link href="/wound-to-anxiety-explorer">
+                    <Heart className="w-4 h-4 mr-2" />
+                    Wound-to-Anxiety Explorer
+                  </Link>
+                </Button>
                 <Button variant="outline" asChild data-testid="button-parts-dialogue">
                   <Link href="/parts-dialogue">
                     <Heart className="w-4 h-4 mr-2" />

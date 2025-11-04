@@ -23,6 +23,7 @@ import AnxietyPartsMapping from "@/pages/AnxietyPartsMapping";
 import DailyAnxietyCheckIn from "@/pages/DailyAnxietyCheckIn";
 import BodySensationsMap from "@/pages/BodySensationsMap";
 import AnxietyTimeline from "@/pages/AnxietyTimeline";
+import WoundToAnxietyExplorer from "@/pages/WoundToAnxietyExplorer";
 import PartsDialogueJournal from "@/pages/PartsDialogueJournal";
 import NotFound from "@/pages/not-found";
 
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/daily-anxiety-checkin" component={DailyAnxietyCheckIn} />
       <Route path="/body-sensations-map" component={BodySensationsMap} />
       <Route path="/anxiety-timeline" component={AnxietyTimeline} />
+      <Route path="/wound-to-anxiety-explorer" component={WoundToAnxietyExplorer} />
       <Route path="/parts-dialogue" component={PartsDialogueJournal} />
       <Route component={NotFound} />
     </Switch>
