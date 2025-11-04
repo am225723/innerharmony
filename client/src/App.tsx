@@ -18,6 +18,8 @@ import CurriculumView from "@/pages/CurriculumView";
 import SharedSessionWorkspace from "@/pages/SharedSessionWorkspace";
 import MediaLibrary from "@/pages/MediaLibrary";
 import IFSLibrary from "@/pages/IFSLibrary";
+import IFSAnxietyLibrary from "@/pages/IFSAnxietyLibrary";
+import AnxietyPartsMapping from "@/pages/AnxietyPartsMapping";
 import PartsDialogueJournal from "@/pages/PartsDialogueJournal";
 import NotFound from "@/pages/not-found";
 
@@ -62,6 +64,8 @@ function Router() {
       <Route path="/session/:sessionId" component={SharedSessionWorkspace} />
       <Route path="/media-library" component={MediaLibrary} />
       <Route path="/ifs-library" component={IFSLibrary} />
+      <Route path="/ifs-anxiety" component={IFSAnxietyLibrary} />
+      <Route path="/anxiety-parts-mapping" component={AnxietyPartsMapping} />
       <Route path="/parts-dialogue" component={PartsDialogueJournal} />
       <Route component={NotFound} />
     </Switch>

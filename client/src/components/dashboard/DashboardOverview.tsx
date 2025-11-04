@@ -26,6 +26,7 @@ import {
   ArrowRight,
   GraduationCap,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react";
 import { type User, type Session as SessionType, type Activity as ActivityType, type AIInsight } from "@shared/schema";
 import { curriculumModules } from "@/lib/curriculumData";
@@ -381,6 +382,22 @@ export function DashboardOverview({
                 <div className="text-left flex-1">
                   <p className="font-medium">IFS Curriculum</p>
                   <p className="text-xs text-muted-foreground">Comprehensive Learn → Activity → Result modules</p>
+                </div>
+              </Button>
+            </Link>
+
+            <Link href="/ifs-anxiety">
+              <Button
+                variant="outline"
+                className="w-full justify-start h-auto p-4 gap-3"
+                data-testid="button-ifs-anxiety"
+              >
+                <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-5 h-5 text-accent" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium">IFS + Anxiety Guide</p>
+                  <p className="text-xs text-muted-foreground">Understanding & healing anxiety through IFS</p>
                 </div>
               </Button>
             </Link>

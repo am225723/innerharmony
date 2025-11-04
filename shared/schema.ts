@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -209,6 +209,18 @@ export const sessionParticipants = pgTable("session_participants", {
   leftAt: timestamp("left_at"),
 });
 
+export const dailyAnxietyCheckins = pgTable("daily_anxiety_checkins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  checkinDate: timestamp("checkin_date").notNull(),
+  anxietyLevel: integer("anxiety_level").notNull(), // 1-10 scale
+  triggeredParts: text("triggered_parts").array().default(sql`ARRAY[]::text[]`),
+  groundingTechniquesUsed: text("grounding_techniques_used").array().default(sql`ARRAY[]::text[]`),
+  selfEnergyMoments: text("self_energy_moments"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -303,6 +315,11 @@ export const insertSessionParticipantSchema = createInsertSchema(sessionParticip
   joinedAt: true,
 });
 
+export const insertDailyAnxietyCheckinSchema = createInsertSchema(dailyAnxietyCheckins).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -350,4 +367,6 @@ export type ProtocolWalkthrough = typeof protocolWalkthroughs.$inferSelect;
 export type InsertProtocolWalkthrough = z.infer<typeof insertProtocolWalkthroughSchema>;
 export type SessionParticipant = typeof sessionParticipants.$inferSelect;
 export type InsertSessionParticipant = z.infer<typeof insertSessionParticipantSchema>;
+export type DailyAnxietyCheckin = typeof dailyAnxietyCheckins.$inferSelect;
+export type InsertDailyAnxietyCheckin = z.infer<typeof insertDailyAnxietyCheckinSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;
