@@ -62,7 +62,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (November 4, 2025)
 
-### IFS + Anxiety Features (Latest Update)
+### Session Goals & Therapist Notes (Latest Update)
+- **Session Goals & Progress Tracking**: Comprehensive goal-setting system at /session-goals with role-aware views for therapists and clients. Therapists create therapeutic goals with 8 categories (self_leadership, parts_work, unburdening, daily_practice, relationship, emotional_regulation, trauma_healing, other), target dates, and private notes. Clients track progress (0-100%), update status (not_started, in_progress, achieved, revised), and add reflections. Features beautiful card-based UI with progress bars, status badges, and separate permissions for therapists (full CRUD) vs clients (progress/status/notes updates only).
+- **Therapist Session Notes**: Private note-taking system at /therapist-notes for documenting client sessions and therapeutic observations. Features include comprehensive note creation with client/session linking, session date tracking, full-text search by content, filtering by client ID, tag system for categorization, part ID tagging for referencing internal IFS parts, and privacy toggle. All notes are therapist-only with ownership validation ensuring secure, confidential documentation. UI includes scrollable note previews, search functionality, and organized display with creation timestamps.
+- **Database Schema**: Added sessionGoals and therapistNotes tables with full Zod validation, TypeScript types, and date transformation support for proper API handling.
+- **Backend Infrastructure**: Complete storage layer with methods for CRUD operations, search functionality for notes, and role-aware API routes with ownership validation. POST routes validate userId matches therapistId, PATCH routes support role-specific field access (therapists can edit all fields, clients limited to progress/status/notes on goals), and DELETE routes enforce ownership checks.
+- **Security Model**: Follows application-wide client-supplied userId pattern with POST validation (userId must match therapistId in body), PATCH/DELETE ownership verification, and role-specific field whitelisting to prevent unauthorized modifications.
+
+### IFS + Anxiety Features
 - **Comprehensive IFS + Anxiety Educational Content**: Created extensive 6-section educational module covering anxiety through IFS lens (Understanding Anxiety Through IFS, How Each Part Type Creates Anxiety, 5 Wounds → Anxiety Pathways, Self-Energy for Anxiety Management, Common Anxiety Scenarios, Daily IFS Practices)
 - **10 Grounding Techniques Library**: Integrated grounding practices specifically designed to help access Self-energy during anxiety, each with IFS integration explanations
 - **IFS + Anxiety Library Page**: Beautiful tabbed interface at /ifs-anxiety displaying all anxiety content with navigation to interactive activities
@@ -84,13 +91,17 @@ Preferred communication style: Simple, everyday language.
 - **Dashboard Improvements**: Client dashboard redesigned to prioritize learning with daily rotating IFS insights and quick access to educational resources
 
 ### Key Files Modified/Added
+- `shared/schema.ts` - Added sessionGoals and therapistNotes tables with Zod schemas and TypeScript types
+- `server/storage.ts` - Implemented storage methods for goals (getGoalsByTherapist, getGoalsByClient, createGoal, updateGoal, deleteGoal) and notes (getNotesByTherapist, getNotesByClient, createNote, updateNote, deleteNote, searchNotes)
+- `server/routes.ts` - Added API routes for /api/goals/* and /api/notes/* with role-aware authorization, ownership validation, and userId verification
+- `client/src/pages/SessionGoals.tsx` - Session goals page with role-based views, create/edit/delete for therapists, progress tracking for clients, form validation with useEffect therapistId population fix
+- `client/src/pages/TherapistNotes.tsx` - Therapist notes page with create/edit/delete, search functionality, tag system, part ID tagging, and privacy controls
+- `client/src/App.tsx` - Registered /session-goals and /therapist-notes routes
 - `client/src/lib/ifsAnxietyKnowledge.ts` - Comprehensive IFS + Anxiety educational content with 6 sections and 10 grounding techniques
 - `client/src/pages/IFSAnxietyLibrary.tsx` - Dedicated anxiety library page with tabbed navigation and activity links
 - `client/src/pages/AnxietyPartsMapping.tsx` - Anxiety-specific parts mapping activity with specialized anxiety fields
-- `shared/schema.ts` - Added dailyAnxietyCheckins table for future anxiety tracking feature
 - `server/ai-service.ts` - Core AI service with Perplexity integration + `respondAsPart()` method for conversational parts embodiment
 - `client/src/pages/PartsDialogueJournal.tsx` - Conversational chat interface for real-time parts dialogue with pattern detection
-- `server/routes.ts` - New POST /api/ai/part-conversation endpoint for parts conversations
 - `client/src/pages/IFSLibrary.tsx` - Comprehensive IFS educational library
 - `client/src/components/collaborative/Collaborative6Fs.tsx` - AI-guided 6 F's Protocol
 - `client/src/components/collaborative/CollaborativeUnburdening.tsx` - Unburdening workspace
