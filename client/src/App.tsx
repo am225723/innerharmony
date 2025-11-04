@@ -26,6 +26,8 @@ import AnxietyTimeline from "@/pages/AnxietyTimeline";
 import WoundToAnxietyExplorer from "@/pages/WoundToAnxietyExplorer";
 import GroundingTechniquesLibrary from "@/pages/GroundingTechniquesLibrary";
 import PartsDialogueJournal from "@/pages/PartsDialogueJournal";
+import SessionGoals from "@/pages/SessionGoals";
+import TherapistNotes from "@/pages/TherapistNotes";
 import NotFound from "@/pages/not-found";
 
 function RoleBasedDashboard() {
@@ -77,6 +79,8 @@ function Router() {
       <Route path="/wound-to-anxiety-explorer" component={WoundToAnxietyExplorer} />
       <Route path="/grounding-techniques" component={GroundingTechniquesLibrary} />
       <Route path="/parts-dialogue" component={PartsDialogueJournal} />
+      <Route path="/session-goals" component={SessionGoals} />
+      <Route path="/therapist-notes" component={TherapistNotes} />
       <Route component={NotFound} />
     </Switch>
   );
