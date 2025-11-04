@@ -18,6 +18,7 @@ import {
   insertSessionNoteSchema,
   insertDailyAnxietyCheckinSchema,
   insertBodySensationSchema,
+  insertGroundingTechniqueProgressSchema,
   insertAnxietyTimelineSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
@@ -564,6 +565,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ success: true });
     } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Grounding Technique Progress Routes
+  app.get("/api/grounding-progress", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId query parameter required" });
+      }
+      
+      const progress = await storage.getGroundingTechniqueProgress(userId);
+      res.json(progress);
+    } catch (error) {
+      console.error("Get grounding progress error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/grounding-progress", async (req: Request, res: Response) => {
+    try {
+      const insertResult = insertGroundingTechniqueProgressSchema.safeParse(req.body);
+      
+      if (!insertResult.success) {
+        return res.status(400).json({ 
+          error: "Invalid request data", 
+          details: insertResult.error.flatten() 
+        });
+      }
+      
+      // Check if progress already exists for this technique
+      const existing = await storage.getGroundingTechniqueProgressByName(
+        insertResult.data.userId,
+        insertResult.data.techniqueName
+      );
+      
+      if (existing) {
+        // Update existing progress
+        const updated = await storage.updateGroundingTechniqueProgress(existing.id, {
+          practiced: true,
+          timesCompleted: (existing.timesCompleted || 0) + 1,
+          lastPracticedAt: new Date(),
+          effectiveness: insertResult.data.effectiveness,
+          notes: insertResult.data.notes,
+        });
+        return res.json(updated);
+      }
+      
+      // Create new progress entry
+      const progress = await storage.createGroundingTechniqueProgress({
+        ...insertResult.data,
+        practiced: true,
+        timesCompleted: 1,
+        lastPracticedAt: new Date(),
+      });
+      
+      res.json(progress);
+    } catch (error) {
+      console.error("Create grounding progress error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/grounding-progress/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for update" });
+      }
+      
+      // Verify ownership before update
+      const allProgress = await storage.getGroundingTechniqueProgress(userId);
+      const progressItem = allProgress.find(p => p.id === id);
+      
+      if (!progressItem) {
+        return res.status(404).json({ error: "Progress record not found or unauthorized" });
+      }
+      
+      const updated = await storage.updateGroundingTechniqueProgress(id, req.body);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update progress" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Update grounding progress error:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });

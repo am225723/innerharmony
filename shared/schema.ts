@@ -221,6 +221,18 @@ export const dailyAnxietyCheckins = pgTable("daily_anxiety_checkins", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const groundingTechniqueProgress = pgTable("grounding_technique_progress", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  techniqueName: text("technique_name").notNull(), // Name of the grounding technique
+  practiced: boolean("practiced").default(false).notNull(), // Has the user practiced it?
+  timesCompleted: integer("times_completed").default(0).notNull(), // How many times completed
+  effectiveness: integer("effectiveness"), // 1-10 scale, how effective was it?
+  notes: text("notes"),
+  lastPracticedAt: timestamp("last_practiced_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const bodySensations = pgTable("body_sensations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -354,6 +366,11 @@ export const insertBodySensationSchema = createInsertSchema(bodySensations).omit
   createdAt: true,
 });
 
+export const insertGroundingTechniqueProgressSchema = createInsertSchema(groundingTechniqueProgress).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertAnxietyTimelineSchema = createInsertSchema(anxietyTimeline).omit({
   id: true,
   createdAt: true,
@@ -414,6 +431,8 @@ export type DailyAnxietyCheckin = typeof dailyAnxietyCheckins.$inferSelect;
 export type InsertDailyAnxietyCheckin = z.infer<typeof insertDailyAnxietyCheckinSchema>;
 export type BodySensation = typeof bodySensations.$inferSelect;
 export type InsertBodySensation = z.infer<typeof insertBodySensationSchema>;
+export type GroundingTechniqueProgress = typeof groundingTechniqueProgress.$inferSelect;
+export type InsertGroundingTechniqueProgress = z.infer<typeof insertGroundingTechniqueProgressSchema>;
 export type AnxietyTimeline = typeof anxietyTimeline.$inferSelect;
 export type InsertAnxietyTimeline = z.infer<typeof insertAnxietyTimelineSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;

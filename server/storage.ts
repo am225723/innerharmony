@@ -27,6 +27,8 @@ import {
   type InsertDailyAnxietyCheckin,
   type BodySensation,
   type InsertBodySensation,
+  type GroundingTechniqueProgress,
+  type InsertGroundingTechniqueProgress,
   type AnxietyTimeline,
   type InsertAnxietyTimeline,
 } from "@shared/schema";
@@ -98,6 +100,12 @@ export interface IStorage {
   createTimelineEvent(event: InsertAnxietyTimeline): Promise<AnxietyTimeline>;
   updateTimelineEvent(id: string, updates: Partial<AnxietyTimeline>): Promise<AnxietyTimeline | undefined>;
   deleteTimelineEvent(id: string): Promise<boolean>;
+
+  // Grounding technique progress methods
+  getGroundingTechniqueProgress(userId: string): Promise<GroundingTechniqueProgress[]>;
+  getGroundingTechniqueProgressByName(userId: string, techniqueName: string): Promise<GroundingTechniqueProgress | undefined>;
+  createGroundingTechniqueProgress(progress: InsertGroundingTechniqueProgress): Promise<GroundingTechniqueProgress>;
+  updateGroundingTechniqueProgress(id: string, updates: Partial<GroundingTechniqueProgress>): Promise<GroundingTechniqueProgress | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -717,6 +725,42 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.anxietyTimeline.id, id))
       .returning();
     return result.length > 0;
+  }
+
+  // Grounding technique progress methods
+  async getGroundingTechniqueProgress(userId: string): Promise<GroundingTechniqueProgress[]> {
+    const results = await this.db.query.groundingTechniqueProgress.findMany({
+      where: eq(schema.groundingTechniqueProgress.userId, userId),
+      orderBy: (progress, { desc }) => [desc(progress.lastPracticedAt)],
+    });
+    return results;
+  }
+
+  async getGroundingTechniqueProgressByName(userId: string, techniqueName: string): Promise<GroundingTechniqueProgress | undefined> {
+    const result = await this.db.query.groundingTechniqueProgress.findFirst({
+      where: (progress, { and, eq }) => and(
+        eq(progress.userId, userId),
+        eq(progress.techniqueName, techniqueName)
+      ),
+    });
+    return result;
+  }
+
+  async createGroundingTechniqueProgress(insertProgress: InsertGroundingTechniqueProgress): Promise<GroundingTechniqueProgress> {
+    const [progress] = await this.db
+      .insert(schema.groundingTechniqueProgress)
+      .values(insertProgress)
+      .returning();
+    return progress;
+  }
+
+  async updateGroundingTechniqueProgress(id: string, updates: Partial<GroundingTechniqueProgress>): Promise<GroundingTechniqueProgress | undefined> {
+    const [updated] = await this.db
+      .update(schema.groundingTechniqueProgress)
+      .set(updates)
+      .where(eq(schema.groundingTechniqueProgress.id, id))
+      .returning();
+    return updated;
   }
 }
 

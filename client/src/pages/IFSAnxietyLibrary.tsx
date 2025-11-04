@@ -269,6 +269,12 @@ export default function IFSAnxietyLibrary() {
                     Wound-to-Anxiety Explorer
                   </Link>
                 </Button>
+                <Button asChild data-testid="button-grounding">
+                  <Link href="/grounding-techniques">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Grounding Techniques Library
+                  </Link>
+                </Button>
                 <Button variant="outline" asChild data-testid="button-parts-dialogue">
                   <Link href="/parts-dialogue">
                     <Heart className="w-4 h-4 mr-2" />
