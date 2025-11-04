@@ -62,7 +62,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (November 4, 2025)
 
-### Conversational Parts Dialogue (Latest Update)
+### IFS + Anxiety Features (Latest Update)
+- **Comprehensive IFS + Anxiety Educational Content**: Created extensive 6-section educational module covering anxiety through IFS lens (Understanding Anxiety Through IFS, How Each Part Type Creates Anxiety, 5 Wounds → Anxiety Pathways, Self-Energy for Anxiety Management, Common Anxiety Scenarios, Daily IFS Practices)
+- **10 Grounding Techniques Library**: Integrated grounding practices specifically designed to help access Self-energy during anxiety, each with IFS integration explanations
+- **IFS + Anxiety Library Page**: Beautiful tabbed interface at /ifs-anxiety displaying all anxiety content with navigation to interactive activities
+- **Anxiety-Specific Parts Mapping**: Dedicated activity page at /anxiety-parts-mapping for mapping anxiety parts with specialized fields for triggers, body sensations, protective strategies, and the fear behind each part
+- **Schema Enhancement**: Added dailyAnxietyCheckins table for future Daily Anxiety Check-In feature (infrastructure ready for implementation)
+
+### Conversational Parts Dialogue
 - **Revolutionary Chat Interface**: Transformed Parts Dialogue from analysis tool to real-time conversational experience where AI embodies internal parts
 - **AI Responds AS Parts**: New `respondAsPart()` method in ai-service.ts creates authentic first-person responses from Manager, Firefighter, and Exile parts
 - **Perplexity Model Update**: Migrated from deprecated "llama-3.1-sonar-small-128k-online" to current "sonar" model for faster, more reliable responses
@@ -77,7 +84,11 @@ Preferred communication style: Simple, everyday language.
 - **Dashboard Improvements**: Client dashboard redesigned to prioritize learning with daily rotating IFS insights and quick access to educational resources
 
 ### Key Files Modified/Added
-- `server/ai-service.ts` - Core AI service with Perplexity integration + new `respondAsPart()` method for conversational parts embodiment
+- `client/src/lib/ifsAnxietyKnowledge.ts` - Comprehensive IFS + Anxiety educational content with 6 sections and 10 grounding techniques
+- `client/src/pages/IFSAnxietyLibrary.tsx` - Dedicated anxiety library page with tabbed navigation and activity links
+- `client/src/pages/AnxietyPartsMapping.tsx` - Anxiety-specific parts mapping activity with specialized anxiety fields
+- `shared/schema.ts` - Added dailyAnxietyCheckins table for future anxiety tracking feature
+- `server/ai-service.ts` - Core AI service with Perplexity integration + `respondAsPart()` method for conversational parts embodiment
 - `client/src/pages/PartsDialogueJournal.tsx` - Conversational chat interface for real-time parts dialogue with pattern detection
 - `server/routes.ts` - New POST /api/ai/part-conversation endpoint for parts conversations
 - `client/src/pages/IFSLibrary.tsx` - Comprehensive IFS educational library

@@ -49,8 +49,8 @@ export default function AnxietyPartsMapping() {
       // Transform to standard part format for saving
       const partData = {
         userId: currentUser.id,
+        type: part.category, // Schema uses 'type' field, not 'category'
         name: part.name,
-        category: part.category,
         description: `Anxiety Role: ${part.anxietyRole}\n\nFear Behind: ${part.fearBehind}`,
         triggers: part.triggers.filter(t => t.trim()),
         beliefs: part.protectiveStrategies.filter(s => s.trim()),
