@@ -49,6 +49,15 @@ export default function IFSLibrary() {
 
   if (!user) return null;
 
+  // Defensive checks for imported data
+  const safeIfsFoundations = ifsFoundations || [];
+  const safeEightCs = eightCsOfSelf || { qualities: [] };
+  const safePartsDeepDive = partsDeepDive || [];
+  const safeFiveWounds = fiveChildhoodWounds || [];
+  const safeSixFs = sixFsProtocol || { steps: [] };
+  const safeUnburdening = unburdeningProcess || { steps: [], prerequisites: [], aftercare: [] };
+  const safeDailyPractices = dailyIFSPractices || [];
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader user={user} onLogout={handleLogout} />
@@ -99,7 +108,7 @@ export default function IFSLibrary() {
           {/* Foundations */}
           <TabsContent value="foundations" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-              {ifsFoundations.map((concept) => (
+              {safeIfsFoundations.map((concept) => (
                 <Card key={concept.id} className="hover-elevate active-elevate-2 cursor-pointer" data-testid={`card-${concept.id}`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -147,13 +156,13 @@ export default function IFSLibrary() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="w-6 h-6 text-primary" />
-                  {eightCsOfSelf.title}
+                  {safeEightCs.title}
                 </CardTitle>
-                <CardDescription>{eightCsOfSelf.description}</CardDescription>
+                <CardDescription>{safeEightCs.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
-                  {eightCsOfSelf.qualities.map((quality) => (
+                  {safeEightCs.qualities.map((quality) => (
                     <Card key={quality.name} className="bg-card/50" data-testid={`card-${quality.name.toLowerCase()}`}>
                       <CardHeader>
                         <CardTitle className="text-lg">{quality.name}</CardTitle>
@@ -179,7 +188,7 @@ export default function IFSLibrary() {
           {/* Parts System */}
           <TabsContent value="parts" className="space-y-4">
             <div className="grid gap-4">
-              {partsDeepDive.map((concept) => (
+              {safePartsDeepDive.map((concept) => (
                 <Card key={concept.id} data-testid={`card-${concept.id}`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -219,7 +228,7 @@ export default function IFSLibrary() {
           {/* Childhood Wounds */}
           <TabsContent value="wounds" className="space-y-4">
             <div className="grid gap-4">
-              {fiveChildhoodWounds.map((wound) => (
+              {safeFiveWounds.map((wound) => (
                 <Card key={wound.id} className="border-l-4 border-l-pink-500" data-testid={`card-${wound.id}`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -279,18 +288,18 @@ export default function IFSLibrary() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="w-6 h-6 text-primary" />
-                  {sixFsProtocol.title}
+                  {safeSixFs.title}
                 </CardTitle>
-                <CardDescription>{sixFsProtocol.description}</CardDescription>
+                <CardDescription>{safeSixFs.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <p className="text-sm font-medium mb-1">Purpose:</p>
-                  <p className="text-sm text-muted-foreground">{sixFsProtocol.purpose}</p>
+                  <p className="text-sm text-muted-foreground">{safeSixFs.purpose}</p>
                 </div>
 
                 <div className="space-y-4">
-                  {sixFsProtocol.steps.map((step) => (
+                  {safeSixFs.steps.map((step) => (
                     <Card key={step.number} className="bg-card/50" data-testid={`card-step-${step.number}`}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -342,7 +351,7 @@ export default function IFSLibrary() {
 
                 <div className="bg-destructive/10 p-4 rounded-lg border border-destructive/20">
                   <p className="text-sm font-medium mb-1">⚠️ Critical Reminder:</p>
-                  <p className="text-sm">{sixFsProtocol.criticalReminder}</p>
+                  <p className="text-sm">{safeSixFs.criticalReminder}</p>
                 </div>
               </CardContent>
             </Card>
@@ -354,20 +363,20 @@ export default function IFSLibrary() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Flame className="w-6 h-6 text-orange-500" />
-                  {unburdeningProcess.title}
+                  {safeUnburdening.title}
                 </CardTitle>
-                <CardDescription>{unburdeningProcess.description}</CardDescription>
+                <CardDescription>{safeUnburdening.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-muted/50 p-4 rounded-lg space-y-2">
                   <p className="text-sm font-medium">Purpose:</p>
-                  <p className="text-sm text-muted-foreground">{unburdeningProcess.purpose}</p>
+                  <p className="text-sm text-muted-foreground">{safeUnburdening.purpose}</p>
                 </div>
 
                 <div>
                   <p className="text-sm font-medium mb-2">Prerequisites:</p>
                   <ul className="space-y-1">
-                    {unburdeningProcess.prerequisites.map((prereq, idx) => (
+                    {safeUnburdening.prerequisites.map((prereq, idx) => (
                       <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                         <ArrowRight className="w-4 h-4 mt-0.5 shrink-0 text-success" />
                         {prereq}
@@ -377,7 +386,7 @@ export default function IFSLibrary() {
                 </div>
 
                 <div className="space-y-4">
-                  {unburdeningProcess.steps.map((step) => (
+                  {safeUnburdening.steps.map((step) => (
                     <Card key={step.number} className="bg-card/50 border-l-4 border-l-orange-500" data-testid={`card-unburdening-${step.number}`}>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -389,16 +398,18 @@ export default function IFSLibrary() {
                         <CardDescription>{step.description}</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
-                        <div>
-                          <p className="text-sm font-medium mb-2">Steps:</p>
-                          <ul className="space-y-1">
-                            {step.instructions.map((instruction, idx) => (
-                              <li key={idx} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-500/30">
-                                {instruction}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                        {step.instructions && (
+                          <div>
+                            <p className="text-sm font-medium mb-2">Steps:</p>
+                            <ul className="space-y-1">
+                              {step.instructions.map((instruction, idx) => (
+                                <li key={idx} className="text-sm text-muted-foreground pl-4 border-l-2 border-orange-500/30">
+                                  {instruction}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {step.example && (
                           <div className="bg-orange-500/10 p-3 rounded-lg">
@@ -434,7 +445,7 @@ export default function IFSLibrary() {
                 <div className="bg-success/10 p-4 rounded-lg">
                   <p className="text-sm font-medium mb-2">Aftercare:</p>
                   <ul className="space-y-1">
-                    {unburdeningProcess.aftercare.map((item, idx) => (
+                    {safeUnburdening.aftercare.map((item, idx) => (
                       <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
                         <ArrowRight className="w-4 h-4 mt-0.5 shrink-0 text-success" />
                         {item}
@@ -445,7 +456,7 @@ export default function IFSLibrary() {
 
                 <div className="bg-destructive/10 p-4 rounded-lg border border-destructive/20">
                   <p className="text-sm font-medium mb-1">⚠️ Critical Note:</p>
-                  <p className="text-sm">{unburdeningProcess.criticalNote}</p>
+                  <p className="text-sm">{safeUnburdening.criticalNote}</p>
                 </div>
               </CardContent>
             </Card>
@@ -454,7 +465,7 @@ export default function IFSLibrary() {
           {/* Daily Practices */}
           <TabsContent value="practices" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
-              {dailyIFSPractices.map((practice, idx) => (
+              {safeDailyPractices.map((practice, idx) => (
                 <Card key={idx} className="hover-elevate active-elevate-2" data-testid={`card-practice-${idx}`}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
