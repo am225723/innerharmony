@@ -250,6 +250,12 @@ export default function IFSAnxietyLibrary() {
                     Anxiety Parts Mapping
                   </Link>
                 </Button>
+                <Button asChild data-testid="button-body-sensations">
+                  <Link href="/body-sensations-map">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Body Sensations Map
+                  </Link>
+                </Button>
                 <Button variant="outline" asChild data-testid="button-parts-dialogue">
                   <Link href="/parts-dialogue">
                     <Heart className="w-4 h-4 mr-2" />

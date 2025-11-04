@@ -17,6 +17,7 @@ import {
   insertSessionMessageSchema,
   insertSessionNoteSchema,
   insertDailyAnxietyCheckinSchema,
+  insertBodySensationSchema,
   loginCredentialsSchema,
 } from "@shared/schema";
 import { z } from "zod";
@@ -405,6 +406,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Body Sensations Routes
+  app.get("/api/body-sensations", async (req: Request, res: Response) => {
+    try {
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      // Ownership is enforced by storage layer - only returns sensations for this userId
+      const sensations = await storage.getBodySensations(userId);
+      res.json(sensations);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/body-sensations", async (req: Request, res: Response) => {
+    try {
+      const sensationData = insertBodySensationSchema.parse(req.body);
+      
+      // Validate userId is provided
+      if (!sensationData.userId) {
+        return res.status(400).json({ error: "userId required" });
+      }
+      
+      const sensation = await storage.createBodySensation(sensationData);
+      res.status(201).json(sensation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors });
+      }
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/body-sensations/:id", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const userId = req.query.userId as string;
+      
+      if (!userId) {
+        return res.status(400).json({ error: "userId required for deletion" });
+      }
+      
+      // Verify ownership before deletion
+      const sensations = await storage.getBodySensations(userId);
+      const sensation = sensations.find(s => s.id === id);
+      
+      if (!sensation) {
+        return res.status(404).json({ error: "Body sensation not found or unauthorized" });
+      }
+      
+      const success = await storage.deleteBodySensation(id);
+      
+      if (!success) {
+        return res.status(500).json({ error: "Failed to delete sensation" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });

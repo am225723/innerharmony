@@ -221,6 +221,17 @@ export const dailyAnxietyCheckins = pgTable("daily_anxiety_checkins", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const bodySensations = pgTable("body_sensations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  bodyRegion: text("body_region").notNull(), // head, neck, shoulders, chest, stomach, arms, legs, etc.
+  sensation: text("sensation").notNull(), // tightness, butterflies, heaviness, tingling, etc.
+  intensity: integer("intensity").notNull(), // 1-10 scale
+  associatedParts: text("associated_parts").array().default(sql`ARRAY[]::text[]`), // Part IDs
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -324,6 +335,11 @@ export const insertDailyAnxietyCheckinSchema = createInsertSchema(dailyAnxietyCh
   ),
 });
 
+export const insertBodySensationSchema = createInsertSchema(bodySensations).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Login schema
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -373,4 +389,6 @@ export type SessionParticipant = typeof sessionParticipants.$inferSelect;
 export type InsertSessionParticipant = z.infer<typeof insertSessionParticipantSchema>;
 export type DailyAnxietyCheckin = typeof dailyAnxietyCheckins.$inferSelect;
 export type InsertDailyAnxietyCheckin = z.infer<typeof insertDailyAnxietyCheckinSchema>;
+export type BodySensation = typeof bodySensations.$inferSelect;
+export type InsertBodySensation = z.infer<typeof insertBodySensationSchema>;
 export type LoginCredentials = z.infer<typeof loginCredentialsSchema>;

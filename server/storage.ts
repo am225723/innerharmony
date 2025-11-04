@@ -25,6 +25,8 @@ import {
   type InsertSessionNote,
   type DailyAnxietyCheckin,
   type InsertDailyAnxietyCheckin,
+  type BodySensation,
+  type InsertBodySensation,
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -83,6 +85,11 @@ export interface IStorage {
   // Daily anxiety check-in methods
   getDailyAnxietyCheckins(userId: string, limit?: number): Promise<DailyAnxietyCheckin[]>;
   createDailyAnxietyCheckin(checkin: InsertDailyAnxietyCheckin): Promise<DailyAnxietyCheckin>;
+
+  // Body sensations methods
+  getBodySensations(userId: string): Promise<BodySensation[]>;
+  createBodySensation(sensation: InsertBodySensation): Promise<BodySensation>;
+  deleteBodySensation(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -643,6 +650,31 @@ export class DatabaseStorage implements IStorage {
       .values(insertCheckin)
       .returning();
     return checkin;
+  }
+
+  // Body sensations methods
+  async getBodySensations(userId: string): Promise<BodySensation[]> {
+    const results = await this.db.query.bodySensations.findMany({
+      where: eq(schema.bodySensations.userId, userId),
+      orderBy: (sensations, { desc }) => [desc(sensations.createdAt)],
+    });
+    return results;
+  }
+
+  async createBodySensation(insertSensation: InsertBodySensation): Promise<BodySensation> {
+    const [sensation] = await this.db
+      .insert(schema.bodySensations)
+      .values(insertSensation)
+      .returning();
+    return sensation;
+  }
+
+  async deleteBodySensation(id: string): Promise<boolean> {
+    const result = await this.db
+      .delete(schema.bodySensations)
+      .where(eq(schema.bodySensations.id, id))
+      .returning();
+    return result.length > 0;
   }
 }
 
