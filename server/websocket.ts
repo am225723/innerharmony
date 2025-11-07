@@ -74,7 +74,7 @@ export function setupWebSocket(server: HTTPServer) {
     ws.on("close", () => {
       console.log("WebSocket client disconnected");
       // Clean up any room associations
-      for (const [sessionId, room] of sessionRooms.entries()) {
+      for (const [sessionId, room] of Array.from(sessionRooms.entries())) {
         if (room.therapist === ws) {
           room.therapist = null;
           room.therapistId = null;

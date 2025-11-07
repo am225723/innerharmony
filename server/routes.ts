@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import * as aiInsights from "./ai-insights";
 import { aiService } from "./ai-service";
 import { supabase } from "./supabase";
+import { requireAuth, type AuthRequest } from "./middleware/auth";
 import {
   insertUserSchema,
   insertSessionSchema,
@@ -136,17 +137,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Routes
-  app.get("/api/users", async (req: Request, res: Response) => {
+  // User Routes - Protected
+  app.get("/api/users", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const role = req.query.role as string | undefined;
-      const requestingUserId = req.query.requestingUserId as string | undefined;
       
-      if (!requestingUserId) {
-        return res.status(401).json({ error: "Unauthorized - requesting user required" });
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
       
-      const requestingUser = await storage.getUser(requestingUserId);
+      const requestingUser = await storage.getUser(req.user.id);
       if (!requestingUser || requestingUser.role !== "therapist") {
         return res.status(403).json({ error: "Forbidden - therapist access only" });
       }
@@ -158,15 +158,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/users/:id", async (req: Request, res: Response) => {
+  app.get("/api/users/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const requestingUserId = req.query.requestingUserId as string | undefined;
-      
-      if (!requestingUserId) {
-        return res.status(401).json({ error: "Unauthorized - requesting user required" });
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
       }
       
-      const requestingUser = await storage.getUser(requestingUserId);
+      const requestingUser = await storage.getUser(req.user.id);
       if (!requestingUser || requestingUser.role !== "therapist") {
         return res.status(403).json({ error: "Forbidden - therapist access only" });
       }
@@ -181,12 +179,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Session Routes
-  app.get("/api/sessions", async (req: Request, res: Response) => {
+  // Session Routes - Protected
+  app.get("/api/sessions", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      if (!req.user) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user.id;
+      
+      if (requestedUserId && requestedUserId !== req.user.id) {
+        const requestingUser = await storage.getUser(req.user.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' sessions" });
+        }
+        userId = requestedUserId;
       }
       
       const sessions = await storage.getSessionsByUserId(userId);
@@ -196,21 +204,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/sessions/:id", async (req: Request, res: Response) => {
+  app.get("/api/sessions/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const session = await storage.getSession(req.params.id);
       if (!session) {
         return res.status(404).json({ error: "Session not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isParticipant = session.therapistId === req.user!.id || session.clientId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isParticipant && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
       res.json(session);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/sessions", async (req: Request, res: Response) => {
+  app.post("/api/sessions", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const sessionData = insertSessionSchema.parse(req.body);
+      
+      // Validate therapistId and clientId - only therapists can create sessions
+      const requestingUser = await storage.getUser(req.user!.id);
+      if (!requestingUser || requestingUser.role !== "therapist") {
+        return res.status(403).json({ error: "Forbidden - only therapists can create sessions" });
+      }
+      
+      // Verify therapistId matches authenticated user
+      if (sessionData.therapistId !== req.user!.id) {
+        return res.status(403).json({ error: "Forbidden - therapists can only create sessions for themselves" });
+      }
+      
       const session = await storage.createSession(sessionData);
       res.status(201).json(session);
     } catch (error) {
@@ -221,12 +250,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/sessions/:id", async (req: Request, res: Response) => {
+  app.patch("/api/sessions/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const session = await storage.updateSession(req.params.id, req.body);
-      if (!session) {
+      const existingSession = await storage.getSession(req.params.id);
+      if (!existingSession) {
         return res.status(404).json({ error: "Session not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isParticipant = existingSession.therapistId === req.user!.id || existingSession.clientId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isParticipant && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
+      const session = await storage.updateSession(req.params.id, req.body);
       res.json(session);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -234,11 +273,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity Routes
-  app.get("/api/activities", async (req: Request, res: Response) => {
+  app.get("/api/activities", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const activities = await storage.getActivitiesByUserId(userId);
@@ -248,21 +293,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/activities/:id", async (req: Request, res: Response) => {
+  app.get("/api/activities/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const activity = await storage.getActivity(req.params.id);
       if (!activity) {
         return res.status(404).json({ error: "Activity not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = activity.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
       res.json(activity);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/activities", async (req: Request, res: Response) => {
+  app.post("/api/activities", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const activityData = insertActivitySchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (activityData.userId && activityData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        activityData.userId = req.user!.id;
+      }
+      
       const activity = await storage.createActivity(activityData);
       res.status(201).json(activity);
     } catch (error) {
@@ -273,12 +339,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/activities/:id", async (req: Request, res: Response) => {
+  app.patch("/api/activities/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const activity = await storage.updateActivity(req.params.id, req.body);
-      if (!activity) {
+      const existingActivity = await storage.getActivity(req.params.id);
+      if (!existingActivity) {
         return res.status(404).json({ error: "Activity not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = existingActivity.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
+      const activity = await storage.updateActivity(req.params.id, req.body);
       res.json(activity);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -286,11 +362,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Parts Routes
-  app.get("/api/parts", async (req: Request, res: Response) => {
+  app.get("/api/parts", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const parts = await storage.getPartsByUserId(userId);
@@ -300,21 +382,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/parts/:id", async (req: Request, res: Response) => {
+  app.get("/api/parts/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const part = await storage.getPart(req.params.id);
       if (!part) {
         return res.status(404).json({ error: "Part not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = part.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
       res.json(part);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/parts", async (req: Request, res: Response) => {
+  app.post("/api/parts", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const partData = insertPartSchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (partData.userId && partData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        partData.userId = req.user!.id;
+      }
+      
       const part = await storage.createPart(partData);
       
       // Create or update Parts Mapping activity (scoped by sessionId if present)
@@ -346,24 +449,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/parts/:id", async (req: Request, res: Response) => {
+  app.patch("/api/parts/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const part = await storage.updatePart(req.params.id, req.body);
-      if (!part) {
+      const existingPart = await storage.getPart(req.params.id);
+      if (!existingPart) {
         return res.status(404).json({ error: "Part not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = existingPart.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
+      const part = await storage.updatePart(req.params.id, req.body);
       res.json(part);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.delete("/api/parts/:id", async (req: Request, res: Response) => {
+  app.delete("/api/parts/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const deleted = await storage.deletePart(req.params.id);
-      if (!deleted) {
+      const existingPart = await storage.getPart(req.params.id);
+      if (!existingPart) {
         return res.status(404).json({ error: "Part not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = existingPart.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
+      const deleted = await storage.deletePart(req.params.id);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -371,11 +494,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Journal Entry Routes
-  app.get("/api/journal-entries", async (req: Request, res: Response) => {
+  app.get("/api/journal-entries", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const entries = await storage.getJournalEntriesByUserId(userId);
@@ -385,21 +514,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/journal-entries/:id", async (req: Request, res: Response) => {
+  app.get("/api/journal-entries/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const entry = await storage.getJournalEntry(req.params.id);
       if (!entry) {
         return res.status(404).json({ error: "Journal entry not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = entry.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
       res.json(entry);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
 
-  app.post("/api/journal-entries", async (req: Request, res: Response) => {
+  app.post("/api/journal-entries", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const entryData = insertJournalEntrySchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (entryData.userId && entryData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        entryData.userId = req.user!.id;
+      }
+      
       const entry = await storage.createJournalEntry(entryData);
       
       // Create or update activity record for this protocol
@@ -451,12 +601,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/journal-entries/:id", async (req: Request, res: Response) => {
+  app.patch("/api/journal-entries/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const entry = await storage.updateJournalEntry(req.params.id, req.body);
-      if (!entry) {
+      const existingEntry = await storage.getJournalEntry(req.params.id);
+      if (!existingEntry) {
         return res.status(404).json({ error: "Journal entry not found" });
       }
+      
+      const requestingUser = await storage.getUser(req.user!.id);
+      const isOwner = existingEntry.userId === req.user!.id;
+      const isTherapist = requestingUser?.role === "therapist";
+      
+      if (!isOwner && !isTherapist) {
+        return res.status(403).json({ error: "Forbidden - insufficient permissions" });
+      }
+      
+      const entry = await storage.updateJournalEntry(req.params.id, req.body);
       res.json(entry);
     } catch (error) {
       res.status(500).json({ error: "Internal server error" });
@@ -464,13 +624,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Daily Anxiety Check-in Routes
-  app.get("/api/anxiety-checkins", async (req: Request, res: Response) => {
+  app.get("/api/anxiety-checkins", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
       
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const checkins = await storage.getDailyAnxietyCheckins(userId, limit);
@@ -480,9 +645,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/anxiety-checkins", async (req: Request, res: Response) => {
+  app.post("/api/anxiety-checkins", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const checkinData = insertDailyAnxietyCheckinSchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (checkinData.userId && checkinData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        checkinData.userId = req.user!.id;
+      }
+      
       const checkin = await storage.createDailyAnxietyCheckin(checkinData);
       res.status(201).json(checkin);
     } catch (error) {
@@ -494,15 +671,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Body Sensations Routes
-  app.get("/api/body-sensations", async (req: Request, res: Response) => {
+  app.get("/api/body-sensations", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
       
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
-      // Ownership is enforced by storage layer - only returns sensations for this userId
       const sensations = await storage.getBodySensations(userId);
       res.json(sensations);
     } catch (error) {
@@ -510,13 +691,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/body-sensations", async (req: Request, res: Response) => {
+  app.post("/api/body-sensations", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const sensationData = insertBodySensationSchema.parse(req.body);
       
-      // Validate userId is provided
-      if (!sensationData.userId) {
-        return res.status(400).json({ error: "userId required" });
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (sensationData.userId && sensationData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        sensationData.userId = req.user!.id;
       }
       
       const sensation = await storage.createBodySensation(sensationData);
@@ -529,14 +716,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/body-sensations/:id", async (req: Request, res: Response) => {
+  app.delete("/api/body-sensations/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for deletion" });
-      }
+      const userId = req.user!.id;
       
       // Verify ownership before deletion
       const sensations = await storage.getBodySensations(userId);
@@ -559,12 +742,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Anxiety Timeline Routes
-  app.get("/api/anxiety-timeline", async (req: Request, res: Response) => {
+  app.get("/api/anxiety-timeline", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
       
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const timeline = await storage.getAnxietyTimeline(userId);
@@ -574,12 +762,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/anxiety-timeline", async (req: Request, res: Response) => {
+  app.post("/api/anxiety-timeline", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const eventData = insertAnxietyTimelineSchema.parse(req.body);
       
-      if (!eventData.userId) {
-        return res.status(400).json({ error: "userId required" });
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (eventData.userId && eventData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        eventData.userId = req.user!.id;
       }
       
       const event = await storage.createTimelineEvent(eventData);
@@ -592,14 +787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/anxiety-timeline/:id", async (req: Request, res: Response) => {
+  app.patch("/api/anxiety-timeline/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for update" });
-      }
+      const userId = req.user!.id;
       
       // Verify ownership before update
       const timeline = await storage.getAnxietyTimeline(userId);
@@ -621,14 +812,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/anxiety-timeline/:id", async (req: Request, res: Response) => {
+  app.delete("/api/anxiety-timeline/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for deletion" });
-      }
+      const userId = req.user!.id;
       
       // Verify ownership before deletion
       const timeline = await storage.getAnxietyTimeline(userId);
@@ -651,12 +838,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Grounding Technique Progress Routes
-  app.get("/api/grounding-progress", async (req: Request, res: Response) => {
+  app.get("/api/grounding-progress", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
       
-      if (!userId) {
-        return res.status(400).json({ error: "userId query parameter required" });
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const progress = await storage.getGroundingTechniqueProgress(userId);
@@ -667,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/grounding-progress", async (req: Request, res: Response) => {
+  app.post("/api/grounding-progress", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const insertResult = insertGroundingTechniqueProgressSchema.safeParse(req.body);
       
@@ -676,6 +868,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Invalid request data", 
           details: insertResult.error.flatten() 
         });
+      }
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (insertResult.data.userId && insertResult.data.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        insertResult.data.userId = req.user!.id;
       }
       
       // Check if progress already exists for this technique
@@ -711,14 +914,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/grounding-progress/:id", async (req: Request, res: Response) => {
+  app.patch("/api/grounding-progress/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for update" });
-      }
+      const userId = req.user!.id;
       
       // Verify ownership before update
       const allProgress = await storage.getGroundingTechniqueProgress(userId);
@@ -742,7 +941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Therapist Assignment Routes
-  app.get("/api/assignments/therapist/:therapistId", async (req: Request, res: Response) => {
+  app.get("/api/assignments/therapist/:therapistId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { therapistId } = req.params;
       const assignments = await storage.getAssignmentsByTherapist(therapistId);
@@ -753,7 +952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/assignments/client/:clientId", async (req: Request, res: Response) => {
+  app.get("/api/assignments/client/:clientId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { clientId } = req.params;
       const assignments = await storage.getAssignmentsByClient(clientId);
@@ -764,7 +963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assignments", async (req: Request, res: Response) => {
+  app.post("/api/assignments", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const insertResult = insertTherapistAssignmentSchema.safeParse(req.body);
       
@@ -775,6 +974,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Validate therapistId - only therapists can create assignments and only for themselves
+      const requestingUser = await storage.getUser(req.user!.id);
+      if (!requestingUser || requestingUser.role !== "therapist") {
+        return res.status(403).json({ error: "Forbidden - only therapists can create assignments" });
+      }
+      
+      // Verify therapistId matches authenticated user
+      if (insertResult.data.therapistId !== req.user!.id) {
+        return res.status(403).json({ error: "Forbidden - therapists can only create assignments for themselves" });
+      }
+      
       const assignment = await storage.createAssignment(insertResult.data);
       res.json(assignment);
     } catch (error) {
@@ -783,14 +993,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/assignments/:id", async (req: Request, res: Response) => {
+  app.patch("/api/assignments/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for update" });
-      }
+      const userId = req.user!.id;
       
       // Fetch all assignments for the user (as therapist or client) to verify ownership
       const therapistAssignments = await storage.getAssignmentsByTherapist(userId);
@@ -839,7 +1045,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const updated = await storage.updateAssignment(id, validationResult.data);
+      const updateData: any = { ...validationResult.data };
+      if (updateData.dueDate && typeof updateData.dueDate === 'string') {
+        updateData.dueDate = new Date(updateData.dueDate);
+      }
+      if (updateData.completedAt && typeof updateData.completedAt === 'string') {
+        updateData.completedAt = new Date(updateData.completedAt);
+      }
+      
+      const updated = await storage.updateAssignment(id, updateData);
       
       if (!updated) {
         return res.status(500).json({ error: "Failed to update assignment" });
@@ -852,14 +1066,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/assignments/:id", async (req: Request, res: Response) => {
+  app.delete("/api/assignments/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for deletion" });
-      }
+      const userId = req.user!.id;
       
       // Only therapist who created the assignment can delete it
       const therapistAssignments = await storage.getAssignmentsByTherapist(userId);
@@ -883,7 +1093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session Goals Routes
-  app.get("/api/goals/therapist/:therapistId", async (req: Request, res: Response) => {
+  app.get("/api/goals/therapist/:therapistId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { therapistId } = req.params;
       const goals = await storage.getGoalsByTherapist(therapistId);
@@ -894,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/goals/client/:clientId", async (req: Request, res: Response) => {
+  app.get("/api/goals/client/:clientId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { clientId } = req.params;
       const goals = await storage.getGoalsByClient(clientId);
@@ -905,13 +1115,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/goals", async (req: Request, res: Response) => {
+  app.post("/api/goals", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for creation" });
-      }
+      const userId = req.user!.id;
       
       const insertResult = insertSessionGoalSchema.safeParse(req.body);
       
@@ -935,14 +1141,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/goals/:id", async (req: Request, res: Response) => {
+  app.patch("/api/goals/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for update" });
-      }
+      const userId = req.user!.id;
       
       // Fetch goals to verify ownership
       const therapistGoals = await storage.getGoalsByTherapist(userId);
@@ -991,7 +1193,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const updated = await storage.updateGoal(id, validationResult.data);
+      const updateData: any = { ...validationResult.data };
+      if (updateData.targetDate && typeof updateData.targetDate === 'string') {
+        updateData.targetDate = new Date(updateData.targetDate);
+      }
+      
+      const updated = await storage.updateGoal(id, updateData);
       
       if (!updated) {
         return res.status(500).json({ error: "Failed to update goal" });
@@ -1004,14 +1211,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/goals/:id", async (req: Request, res: Response) => {
+  app.delete("/api/goals/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for deletion" });
-      }
+      const userId = req.user!.id;
       
       // Only therapist who created the goal can delete it
       const therapistGoals = await storage.getGoalsByTherapist(userId);
@@ -1035,7 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Therapist Notes Routes
-  app.get("/api/notes/therapist/:therapistId", async (req: Request, res: Response) => {
+  app.get("/api/notes/therapist/:therapistId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { therapistId } = req.params;
       const notes = await storage.getNotesByTherapist(therapistId);
@@ -1046,7 +1249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notes/client/:therapistId/:clientId", async (req: Request, res: Response) => {
+  app.get("/api/notes/client/:therapistId/:clientId", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { therapistId, clientId } = req.params;
       const notes = await storage.getNotesByClient(therapistId, clientId);
@@ -1057,7 +1260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notes/search", async (req: Request, res: Response) => {
+  app.get("/api/notes/search", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const therapistId = req.query.therapistId as string;
       const searchTerm = req.query.q as string || "";
@@ -1076,13 +1279,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notes", async (req: Request, res: Response) => {
+  app.post("/api/notes", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for creation" });
-      }
+      const userId = req.user!.id;
       
       const insertResult = insertTherapistNoteSchema.safeParse(req.body);
       
@@ -1106,14 +1305,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/notes/:id", async (req: Request, res: Response) => {
+  app.patch("/api/notes/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for update" });
-      }
+      const userId = req.user!.id;
       
       // Verify therapist ownership
       const therapistNotes = await storage.getNotesByTherapist(userId);
@@ -1158,14 +1353,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/notes/:id", async (req: Request, res: Response) => {
+  app.delete("/api/notes/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const userId = req.query.userId as string;
-      
-      if (!userId) {
-        return res.status(400).json({ error: "userId required for deletion" });
-      }
+      const userId = req.user!.id;
       
       // Only therapist who created the note can delete it
       const therapistNotes = await storage.getNotesByTherapist(userId);
@@ -1222,11 +1413,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Insights Routes
-  app.get("/api/ai-insights", async (req: Request, res: Response) => {
+  app.get("/api/ai-insights", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const insights = await storage.getAIInsightsByUserId(userId);
@@ -1236,7 +1433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/ai-insights/generate", async (req: Request, res: Response) => {
+  app.post("/api/ai-insights/generate", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { userId, sessionId } = req.body;
       
@@ -1326,9 +1523,21 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai-insights", async (req: Request, res: Response) => {
+  app.post("/api/ai-insights", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const insightData = insertAIInsightSchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (insightData.userId && insightData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        insightData.userId = req.user!.id;
+      }
+      
       const insight = await storage.createAIInsight(insightData);
       res.status(201).json(insight);
     } catch (error) {
@@ -1340,11 +1549,17 @@ Provide a personalized IFS insight for this client.`;
   });
 
   // Media Routes
-  app.get("/api/media", async (req: Request, res: Response) => {
+  app.get("/api/media", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const media = await storage.getMediaByUserId(userId);
@@ -1354,9 +1569,21 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/media", async (req: Request, res: Response) => {
+  app.post("/api/media", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const mediaData = insertMediaSchema.parse(req.body);
+      
+      // Validate userId - default to authenticated user, only therapists can create for others
+      if (mediaData.userId && mediaData.userId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can create resources for other users" });
+        }
+      } else {
+        // Override userId to authenticated user for security
+        mediaData.userId = req.user!.id;
+      }
+      
       const media = await storage.createMedia(mediaData);
       res.status(201).json(media);
     } catch (error) {
@@ -1368,7 +1595,7 @@ Provide a personalized IFS insight for this client.`;
   });
 
   // Lesson Routes
-  app.get("/api/lessons", async (req: Request, res: Response) => {
+  app.get("/api/lessons", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const lessons = await storage.getAllLessons();
       res.json(lessons);
@@ -1377,7 +1604,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.get("/api/lessons/:id", async (req: Request, res: Response) => {
+  app.get("/api/lessons/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const lesson = await storage.getLesson(req.params.id);
       if (!lesson) {
@@ -1389,7 +1616,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/lessons", async (req: Request, res: Response) => {
+  app.post("/api/lessons", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const lessonData = insertLessonSchema.parse(req.body);
       const lesson = await storage.createLesson(lessonData);
@@ -1402,7 +1629,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.get("/api/lessons/:id/activities", async (req: Request, res: Response) => {
+  app.get("/api/lessons/:id/activities", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const activities = await storage.getLessonActivitiesByLessonId(req.params.id);
       res.json(activities);
@@ -1411,7 +1638,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/lesson-activities", async (req: Request, res: Response) => {
+  app.post("/api/lesson-activities", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const activityData = insertLessonActivitySchema.parse(req.body);
       const activity = await storage.createLessonActivity(activityData);
@@ -1424,11 +1651,17 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.get("/api/lesson-progress", async (req: Request, res: Response) => {
+  app.get("/api/lesson-progress", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const userId = req.query.userId as string;
-      if (!userId) {
-        return res.status(400).json({ error: "userId required" });
+      const requestedUserId = req.query.userId as string;
+      let userId = req.user!.id;
+      
+      if (requestedUserId && requestedUserId !== req.user!.id) {
+        const requestingUser = await storage.getUser(req.user!.id);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(403).json({ error: "Forbidden - only therapists can view other users' data" });
+        }
+        userId = requestedUserId;
       }
       
       const progress = await storage.getLessonProgressByUserId(userId);
@@ -1438,9 +1671,13 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/lesson-progress", async (req: Request, res: Response) => {
+  app.post("/api/lesson-progress", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const progressData = insertLessonProgressSchema.parse(req.body);
+      
+      // Always use authenticated user's ID for lesson progress
+      progressData.userId = req.user!.id;
+      
       const progress = await storage.createLessonProgress(progressData);
       res.status(201).json(progress);
     } catch (error) {
@@ -1451,9 +1688,23 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.patch("/api/lesson-progress/:id", async (req: Request, res: Response) => {
+  app.patch("/api/lesson-progress/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
-      const updated = await storage.updateLessonProgress(req.params.id, req.body);
+      const { id } = req.params;
+      const userId = req.user!.id;
+      
+      // Verify ownership before update
+      const allProgress = await storage.getLessonProgressByUserId(userId);
+      const progressItem = allProgress.find(p => p.id === id);
+      
+      if (!progressItem) {
+        const requestingUser = await storage.getUser(userId);
+        if (!requestingUser || requestingUser.role !== "therapist") {
+          return res.status(404).json({ error: "Progress not found or unauthorized" });
+        }
+      }
+      
+      const updated = await storage.updateLessonProgress(id, req.body);
       if (!updated) {
         return res.status(404).json({ error: "Progress not found" });
       }
@@ -1464,7 +1715,7 @@ Provide a personalized IFS insight for this client.`;
   });
 
   // Collaborative Session Routes
-  app.get("/api/sessions/:sessionId/messages", async (req: Request, res: Response) => {
+  app.get("/api/sessions/:sessionId/messages", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const messages = await storage.getSessionMessages(req.params.sessionId);
       res.json(messages);
@@ -1473,12 +1724,16 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/sessions/:sessionId/messages", async (req: Request, res: Response) => {
+  app.post("/api/sessions/:sessionId/messages", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const messageData = insertSessionMessageSchema.parse({
         ...req.body,
         sessionId: req.params.sessionId,
       });
+      
+      // Always override senderId with authenticated user for security
+      messageData.senderId = req.user!.id;
+      
       const message = await storage.createSessionMessage(messageData);
       res.status(201).json(message);
     } catch (error) {
@@ -1489,7 +1744,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.get("/api/sessions/:sessionId/notes", async (req: Request, res: Response) => {
+  app.get("/api/sessions/:sessionId/notes", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const notes = await storage.getSessionNotes(req.params.sessionId);
       res.json(notes);
@@ -1498,12 +1753,16 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/sessions/:sessionId/notes", async (req: Request, res: Response) => {
+  app.post("/api/sessions/:sessionId/notes", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const noteData = insertSessionNoteSchema.parse({
         ...req.body,
         sessionId: req.params.sessionId,
       });
+      
+      // Always override authorId with authenticated user for security
+      noteData.authorId = req.user!.id;
+      
       const note = await storage.createSessionNote(noteData);
       res.status(201).json(note);
     } catch (error) {
@@ -1514,7 +1773,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.patch("/api/sessions/:sessionId/notes/:id", async (req: Request, res: Response) => {
+  app.patch("/api/sessions/:sessionId/notes/:id", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const updated = await storage.updateSessionNote(req.params.id, req.body);
       if (!updated) {
@@ -1527,7 +1786,7 @@ Provide a personalized IFS insight for this client.`;
   });
 
   // AI Insights Routes
-  app.post("/api/ai/journal-reflection", async (req: Request, res: Response) => {
+  app.post("/api/ai/journal-reflection", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { entryId } = req.body;
       if (!entryId) {
@@ -1547,7 +1806,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/parts-analysis", async (req: Request, res: Response) => {
+  app.post("/api/ai/parts-analysis", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { userId } = req.body;
       if (!userId) {
@@ -1567,7 +1826,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/ask-question", async (req: Request, res: Response) => {
+  app.post("/api/ai/ask-question", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { question, userId } = req.body;
       if (!question) {
@@ -1598,7 +1857,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/unburdening-visualization", async (req: Request, res: Response) => {
+  app.post("/api/ai/unburdening-visualization", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { partId, burden } = req.body;
       if (!partId || !burden) {
@@ -1622,7 +1881,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/protector-appreciation", async (req: Request, res: Response) => {
+  app.post("/api/ai/protector-appreciation", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { partId } = req.body;
       if (!partId) {
@@ -1647,7 +1906,7 @@ Provide a personalized IFS insight for this client.`;
   });
 
   // New AI Service Routes for Collaborative Features
-  app.post("/api/ai/protocol-guidance", async (req: Request, res: Response) => {
+  app.post("/api/ai/protocol-guidance", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { protocolType, currentStep, userResponse } = req.body;
       if (!protocolType || !currentStep) {
@@ -1662,7 +1921,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/parts-dialogue-analysis", async (req: Request, res: Response) => {
+  app.post("/api/ai/parts-dialogue-analysis", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { dialogue, partType, userId } = req.body;
       if (!dialogue || !userId) {
@@ -1689,7 +1948,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/wound-identification", async (req: Request, res: Response) => {
+  app.post("/api/ai/wound-identification", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { description, symptoms } = req.body;
       if (!description) {
@@ -1704,7 +1963,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/unburdening-visualization-new", async (req: Request, res: Response) => {
+  app.post("/api/ai/unburdening-visualization-new", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { burden } = req.body;
       if (!burden) {
@@ -1719,7 +1978,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/reparenting-phrases", async (req: Request, res: Response) => {
+  app.post("/api/ai/reparenting-phrases", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { woundType, exileAge, situation } = req.body;
       if (!woundType) {
@@ -1734,7 +1993,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/ifs-question", async (req: Request, res: Response) => {
+  app.post("/api/ai/ifs-question", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { question } = req.body;
       if (!question) {
@@ -1749,7 +2008,7 @@ Provide a personalized IFS insight for this client.`;
     }
   });
 
-  app.post("/api/ai/part-conversation", async (req: Request, res: Response) => {
+  app.post("/api/ai/part-conversation", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const { partType, userMessage, conversationHistory, partName } = req.body;
       if (!partType || !userMessage) {
