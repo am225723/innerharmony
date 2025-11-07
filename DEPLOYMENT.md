@@ -285,21 +285,22 @@ Test AI endpoints after deployment:
 
 2. **Parts Dialogue Analysis:**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/ai/analyze-dialogue \
+   curl -X POST https://your-project.vercel.app/api/ai/parts-dialogue-analysis \
      -H "Content-Type: application/json" \
      -d '{
-       "dialogue": "I feel overwhelmed when people get close",
-       "partType": "manager"
+       "dialogue": "I feel anxious when people get close",
+       "partType": "manager",
+       "userId": "test-user-1"
      }'
    ```
 
 3. **Wound Identification:**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/ai/identify-wound \
+   curl -X POST https://your-project.vercel.app/api/ai/wound-identification \
      -H "Content-Type: application/json" \
      -d '{
-       "description": "I always feel like I need to be perfect or I am worthless",
-       "symptoms": ["perfectionism", "self-criticism", "fear of failure"]
+       "description": "I always feel like I need to be perfect",
+       "symptoms": ["perfectionism", "self-criticism"]
      }'
    ```
 
@@ -327,7 +328,7 @@ Test AI endpoints after deployment:
 
 6. **Educational Q&A:**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/ai/educational-qa \
+   curl -X POST https://your-project.vercel.app/api/ai/ifs-question \
      -H "Content-Type: application/json" \
      -d '{
        "question": "What is the difference between a Manager and a Firefighter part?"
@@ -336,21 +337,21 @@ Test AI endpoints after deployment:
 
 7. **General Therapeutic Insights:**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/ai/general-insight \
+   curl -X POST https://your-project.vercel.app/api/ai/ask-question \
      -H "Content-Type: application/json" \
      -d '{
-       "context": "Client struggling with perfectionism and people-pleasing",
-       "focus": "understanding protective strategies"
+       "question": "How can I work with perfectionism using IFS?",
+       "context": "struggling with self-criticism"
      }'
    ```
 
 8. **Conversational Parts:**
    ```bash
-   curl -X POST https://your-project.vercel.app/api/ai/respond-as-part \
+   curl -X POST https://your-project.vercel.app/api/ai/part-conversation \
      -H "Content-Type: application/json" \
      -d '{
        "partType": "exile",
-       "userMessage": "Why do you feel abandoned?",
+       "userMessage": "Why do you feel so alone?",
        "conversationHistory": []
      }'
    ```
@@ -362,13 +363,13 @@ Expected: All endpoints return JSON responses with AI-generated insights and cit
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/api/ai/protocol-guidance` | POST | Step-by-step IFS protocol guidance |
-| `/api/ai/analyze-dialogue` | POST | Pattern detection in parts dialogue |
-| `/api/ai/identify-wound` | POST | Identify childhood wounds from symptoms |
+| `/api/ai/parts-dialogue-analysis` | POST | Pattern detection in parts dialogue |
+| `/api/ai/wound-identification` | POST | Identify childhood wounds from symptoms |
 | `/api/ai/unburdening-visualization` | POST | Generate unburdening visualizations |
 | `/api/ai/reparenting-phrases` | POST | Self-to-exile healing phrases |
-| `/api/ai/educational-qa` | POST | IFS theory Q&A |
-| `/api/ai/general-insight` | POST | General therapeutic insights |
-| `/api/ai/respond-as-part` | POST | Conversational parts embodiment |
+| `/api/ai/ifs-question` | POST | IFS theory Q&A |
+| `/api/ai/ask-question` | POST | General therapeutic insights |
+| `/api/ai/part-conversation` | POST | Conversational parts embodiment |
 
 ---
 
