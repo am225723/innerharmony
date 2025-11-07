@@ -10,19 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, Shield, Sparkles } from "lucide-react";
 
 interface LoginFormProps {
-  onSubmit: (credentials: LoginCredentials, role: "therapist" | "client") => Promise<void>;
+  onSubmit: (credentials: LoginCredentials) => Promise<void>;
   isLoading?: boolean;
 }
 
 export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
-  const [selectedRole, setSelectedRole] = useState<"therapist" | "client">("client");
-  
   const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({
     resolver: zodResolver(loginSchema),
   });
 
   const handleFormSubmit = async (data: LoginCredentials) => {
-    await onSubmit(data, selectedRole);
+    await onSubmit(data);
   };
 
   return (
@@ -40,38 +38,11 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
           </p>
         </div>
 
-        <div className="flex gap-3 p-1 bg-muted/50 rounded-lg">
-          <Button
-            type="button"
-            variant={selectedRole === "client" ? "default" : "ghost"}
-            className="flex-1 gap-2"
-            onClick={() => setSelectedRole("client")}
-            data-testid="button-select-client"
-          >
-            <Heart className="w-4 h-4" />
-            Client
-          </Button>
-          <Button
-            type="button"
-            variant={selectedRole === "therapist" ? "default" : "ghost"}
-            className="flex-1 gap-2"
-            onClick={() => setSelectedRole("therapist")}
-            data-testid="button-select-therapist"
-          >
-            <Shield className="w-4 h-4" />
-            Therapist
-          </Button>
-        </div>
-
         <Card className="shadow-lg border-card-border">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
-            <CardDescription className="flex items-center gap-2">
-              Sign in as {selectedRole}
-              <Badge variant="secondary" className="gap-1">
-                <Sparkles className="w-3 h-3" />
-                {selectedRole === "therapist" ? "Guide" : "Seeker"}
-              </Badge>
+            <CardDescription>
+              Sign in to your account
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -10,13 +10,10 @@ export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (credentials: LoginCredentials, role: "therapist" | "client") => {
+  const handleLogin = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", "/api/auth/login", {
-        ...credentials,
-        role,
-      });
+      const response = await apiRequest("POST", "/api/auth/login", credentials);
 
       const data = await response.json();
       
