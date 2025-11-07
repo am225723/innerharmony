@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Redirect } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { UserPlus, Users } from "lucide-react";
+import { UserPlus, Users, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface User {
   id: string;
@@ -19,14 +21,56 @@ interface User {
 
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) {
+      setIsAuthorized(false);
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userStr);
+      if (!user || user.role !== "therapist") {
+        setIsAuthorized(false);
+        return;
+      }
+      setIsAuthorized(true);
+    } catch (error) {
+      setIsAuthorized(false);
+    }
+  }, []);
+
+  if (isAuthorized === false) {
+    return <Redirect to="/dashboard" />;
+  }
+
+  if (isAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<"therapist" | "client">("client");
 
-  const { data: users = [], isLoading } = useQuery<User[]>({
+  const { data: users = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error loading users",
+        description: "Failed to fetch user list. You may not have permission to view this page.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: { email: string; password: string; displayName: string; role: string }) => {
@@ -162,6 +206,14 @@ export default function AdminDashboard() {
             <CardContent>
               {isLoading ? (
                 <div className="text-muted-foreground">Loading users...</div>
+              ) : error ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>
+                    Unable to load user statistics. Please ensure you have the necessary permissions.
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -196,6 +248,14 @@ export default function AdminDashboard() {
           <CardContent>
             {isLoading ? (
               <div className="text-muted-foreground">Loading users...</div>
+            ) : error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  Unable to load user list. Please check your permissions.
+                </AlertDescription>
+              </Alert>
             ) : users.length === 0 ? (
               <div className="text-muted-foreground text-center py-8">No users found</div>
             ) : (
