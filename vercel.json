@@ -2,7 +2,7 @@
   "version": 2,
   "name": "compassionate-path-ifs",
   "buildCommand": "npm run build",
-  "outputDirectory": "client/dist",
+  "outputDirectory": "dist/public",
   "rewrites": [
     {
       "source": "/(.*)",

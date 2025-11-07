@@ -72,9 +72,10 @@ The application is designed for deployment on Vercel with a Supabase backend. Ke
 
 **Supabase Migration & Vercel Deployment**
 - Created production-ready `supabase_migration.sql` (759 lines) with 24 tables using `IFS_` prefix, 76 comprehensive RLS policies, 42 foreign key constraints, and complete indexing
-- Configured `vercel.json` with correct build output (`client/dist`), SPA routing, and framework-agnostic setup
+- Configured `vercel.json` with correct build output (`dist/public` to match Vite config), SPA routing, and framework-agnostic setup
 - Authored complete `DEPLOYMENT.md` guide (10 parts, 600+ lines) covering Supabase setup, database migration, environment variables, Vercel deployment, AI testing, troubleshooting, security best practices, and scaling
 - Established hybrid migration workflow: SQL file for initial setup, Drizzle ORM (`npm run db:push -- --force`) for ongoing changes
+- Fixed output directory configuration to match vite.config.ts build path (`dist/public`)
 - Architect-verified all deployment configurations for production readiness
 
 **AI Integration Live Verification**

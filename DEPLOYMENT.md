@@ -166,7 +166,7 @@ After creating your Vercel project (see Part 3), add environment variables:
 ### 3.1 Prepare Repository
 
 1. The `vercel.json` file is already configured at repository root with correct settings:
-   - Output directory: `client/dist` (Vite build output)
+   - Output directory: `dist/public` (Vite build output)
    - Build command: `npm run build`
    - SPA routing configured automatically
 
@@ -187,7 +187,7 @@ git push origin main
    - **Framework Preset:** Other
    - **Root Directory:** `./` (leave default)
    - **Build Command:** `npm run build`
-   - **Output Directory:** `client/dist`
+   - **Output Directory:** `dist/public`
    - **Install Command:** `npm install`
 
 5. Add environment variables (from 2.2 above)
