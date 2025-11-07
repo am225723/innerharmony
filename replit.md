@@ -70,6 +70,36 @@ The application is designed for deployment on Vercel with a Supabase backend. Ke
 
 ## Recent Changes
 
+### November 7, 2025 - Admin Dashboard for User Management
+
+**Admin User Management System**
+- Created comprehensive admin dashboard at `/admin` route for therapist-only user management
+- Implemented Supabase Admin SDK integration using service role key for programmatic user creation
+- Built secure backend endpoint `POST /api/admin/users` that creates users in both Supabase Auth and database
+- Added client-side authorization guard ensuring only therapists can access admin features
+- Configured support@drzelisko.com as therapist account for administrative access
+
+**Admin Dashboard Features**
+- User creation form with email, password, display name, and role selection (therapist/client)
+- Real-time user statistics showing total users, therapist count, and client count
+- Complete user list with role badges and user details
+- Error handling with toast notifications and inline alerts for authorization failures
+- Form validation preventing incomplete submissions
+
+**Security Implementation**
+- Admin routes protected by both client-side (localStorage role check) and server-side (requireAuth + therapist verification) guards
+- Service role key kept strictly server-side, never exposed to client
+- Unauthorized users automatically redirected to dashboard
+- Query errors properly surfaced with user-friendly error messages
+
+**Files Modified**:
+- `server/supabase.ts` - Added supabaseAdmin client with service role key
+- `server/routes.ts` - New POST /api/admin/users endpoint for user creation
+- `client/src/pages/AdminDashboard.tsx` - New admin dashboard component
+- `client/src/App.tsx` - Added /admin route
+- Database: Updated support@drzelisko.com to therapist role
+- Architect-verified with PASS rating after security fixes
+
 ### November 7, 2025 - Supabase Authentication Migration
 
 **Critical Security Fixes**
