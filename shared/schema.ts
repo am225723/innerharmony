@@ -3,7 +3,7 @@ import { pgTable, text, varchar, timestamp, jsonb, boolean, integer } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export const users = pgTable("IFS_users", {
   id: varchar("id").primaryKey(),
   email: text("email").notNull().unique(),
   username: text("username"),
