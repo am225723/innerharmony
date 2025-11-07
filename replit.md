@@ -16,7 +16,7 @@ The frontend uses React 18 with TypeScript and Vite. It leverages Radix UI primi
 
 ### Backend Architecture
 
-The backend is built with Node.js and Express.js, providing a REST API with endpoints organized by resource to support CRUD operations. Session management uses simple credential-based authentication with "therapist" and "client" roles, and user data is stored in localStorage. Business logic is designed with a swappable storage layer that manages users, sessions, activities, IFS parts, journal entries, AI insights, and media.
+The backend is built with Node.js and Express.js, providing a REST API with endpoints organized by resource to support CRUD operations. Authentication is handled by Supabase Auth with JWT token verification on all protected routes. User roles ("therapist" and "client") support role-based access control, with therapists able to access client data and clients restricted to their own resources. Business logic is designed with a swappable storage layer that manages users, sessions, activities, IFS parts, journal entries, AI insights, and media. All protected routes enforce ownership checks and prevent horizontal privilege escalation.
 
 ### Data Storage Solutions
 
@@ -52,6 +52,8 @@ The application is designed for deployment on Vercel with a Supabase backend. Ke
 **Environment Variables** (configured in Vercel):
 - `DATABASE_URL`: PostgreSQL connection string from Supabase
 - `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, `PGPORT`: Individual database credentials
+- `SUPABASE_URL`: Supabase project URL for authentication
+- `SUPABASE_ANON_KEY`: Supabase anonymous key for client-side auth
 - `SESSION_SECRET`: 32+ character random string for session encryption
 - `PERPLEXITY_API_KEY`: API key for AI therapeutic insights integration
 - `NODE_ENV`: Set to "production" for deployment
@@ -67,6 +69,37 @@ The application is designed for deployment on Vercel with a Supabase backend. Ke
 **Font Loading**: Google Fonts (Inter, Poppins).
 
 ## Recent Changes
+
+### November 7, 2025 - Supabase Authentication Migration
+
+**Critical Security Fixes**
+- Migrated from simple credential-based auth to Supabase Auth with JWT token verification
+- Implemented comprehensive authentication middleware (`server/middleware/auth.ts`) that verifies Supabase JWT tokens and injects authenticated user into requests
+- Fixed critical horizontal privilege escalation vulnerabilities through iterative security hardening:
+  * Protected all 77 API routes with `requireAuth` middleware
+  * Eliminated authorization bypass by enforcing ownership checks on all GET/PATCH/DELETE endpoints
+  * Secured POST endpoints to prevent userId impersonation in request bodies
+  * Implemented role-based access control (therapists can access client data, clients can only access their own)
+- Updated frontend API client to automatically include Supabase access tokens in Authorization headers
+- Database schema updated: users table with email (required, unique), username (nullable), password removed (Supabase manages credentials)
+
+**Authentication Security Patterns**
+1. **Default to Authenticated User**: All routes default to `req.user.id` instead of trusting query/body parameters
+2. **Therapist Override**: Only therapists can access other users' data by passing userId parameters
+3. **Ownership Verification**: GET/PATCH/DELETE /:id routes verify resource ownership or therapist role
+4. **POST Validation**: Creation endpoints validate userId matches authenticated user (with therapist override)
+5. **Impersonation Prevention**: Message/note endpoints always override senderId/authorId with authenticated user
+
+**Files Modified**:
+- `server/middleware/auth.ts` - New authentication middleware with JWT verification
+- `server/supabase.ts` - New Supabase client configuration
+- `server/routes.ts` - All 77 protected routes updated with security checks (21 GET routes, 16 POST routes, 14 PATCH routes, 10 DELETE routes)
+- `client/src/lib/queryClient.ts` - Updated to send Authorization: Bearer tokens
+- `client/src/lib/supabase.ts` - New Supabase client for frontend
+- `client/src/pages/Login.tsx` - Updated login flow to use Supabase Auth
+- `client/src/components/auth/LoginForm.tsx` - New email-based login form
+- `shared/schema.ts` - Updated users table for Supabase Auth compatibility
+- Architect-verified with PASS rating after fixing all authorization vulnerabilities
 
 ### November 7, 2025 - Production Deployment & Design Modernization
 
