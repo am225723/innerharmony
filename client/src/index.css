@@ -63,7 +63,7 @@
 
   --accent: 12 76% 61%; /* Warm terracotta - sophisticated coral alternative */
 
-  --accent-foreground: 0 0% 100%;
+  --accent-foreground: 220 15% 20%; /* Dark foreground for accessibility (4.5:1 contrast ratio) */
 
   --destructive: 0 72% 51%;
 
@@ -198,9 +198,9 @@
 
   --muted-foreground: 220 10% 65%;
 
-  --accent: 12 76% 65%;
+  --accent: 12 76% 48%; /* Darker terracotta for proper contrast with white text */
 
-  --accent-foreground: 220 20% 10%;
+  --accent-foreground: 0 0% 100%; /* White text achieves 4.5:1 contrast on darker accent */
 
   --destructive: 0 72% 58%;
 
@@ -215,7 +215,7 @@
   --chart-1: 233 60% 60%;
   --chart-2: 184 65% 55%;
   --chart-3: 142 71% 52%;
-  --chart-4: 12 76% 65%;
+  --chart-4: 12 76% 48%;
   --chart-5: 45 82% 60%;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(240 100% 0% / 0.20);
