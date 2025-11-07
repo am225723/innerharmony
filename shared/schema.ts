@@ -4,9 +4,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  id: varchar("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  username: text("username"),
   role: text("role", { enum: ["therapist", "client"] }).notNull().default("client"),
   displayName: text("display_name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -306,7 +306,6 @@ export const therapistNotes = pgTable("therapist_notes", {
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
   createdAt: true,
 });
 
@@ -458,12 +457,12 @@ export const insertTherapistNoteSchema = createInsertSchema(therapistNotes).omit
 
 // Login schema
 export const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 export const loginCredentialsSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
   role: z.enum(["therapist", "client"]),
 });

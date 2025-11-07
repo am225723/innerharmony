@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import * as aiInsights from "./ai-insights";
 import { aiService } from "./ai-service";
+import { supabase } from "./supabase";
 import {
   insertUserSchema,
   insertSessionSchema,
@@ -28,32 +29,109 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth Routes
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  // Auth Routes - Supabase Auth
+  app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
-      const credentials = loginCredentialsSchema.parse(req.body);
-      const { username, password, role } = credentials;
+      if (!supabase) {
+        return res.status(503).json({ error: "Authentication service not configured" });
+      }
+
+      const { email, password, role, displayName } = req.body;
       
-      let user = await storage.getUserByUsername(username);
+      if (!email || !password || !role || !displayName) {
+        return res.status(400).json({ error: "Email, password, role, and display name are required" });
+      }
       
-      if (!user) {
-        user = await storage.createUser({
-          username,
-          password,
-          displayName: username,
-          role,
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role,
+            display_name: displayName,
+          },
+        },
+      });
+      
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      
+      if (data.user) {
+        await storage.createUser({
+          id: data.user.id,
+          email: data.user.email!,
+          username: data.user.email!.split('@')[0],
+          role: role as "therapist" | "client",
+          displayName,
         });
       }
       
-      if (user.password !== password || user.role !== role) {
-        return res.status(401).json({ error: "Invalid credentials" });
+      res.json({ 
+        user: data.user,
+        session: data.session,
+      });
+    } catch (error) {
+      console.error('Signup error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      if (!supabase) {
+        return res.status(503).json({ error: "Authentication service not configured" });
+      }
+
+      const credentials = loginCredentialsSchema.parse(req.body);
+      const { email, password } = credentials;
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return res.status(401).json({ error: error.message });
       }
       
-      res.json({ user: { ...user, password: undefined } });
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user && data.user) {
+        user = await storage.createUser({
+          id: data.user.id,
+          email: data.user.email!,
+          username: data.user.email!.split('@')[0],
+          role: (data.user.user_metadata?.role as "therapist" | "client") || "client",
+          displayName: data.user.user_metadata?.display_name || data.user.email!.split('@')[0],
+        });
+      }
+      
+      res.json({ 
+        user,
+        session: data.session,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
+      console.error('Login error:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req: Request, res: Response) => {
+    try {
+      if (!supabase) {
+        return res.status(503).json({ error: "Authentication service not configured" });
+      }
+
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.json({ success: true });
+    } catch (error) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
