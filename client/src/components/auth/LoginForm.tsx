@@ -77,17 +77,18 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
           <CardContent>
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  placeholder="Enter your username"
-                  {...register("username")}
-                  data-testid="input-username"
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  {...register("email")}
+                  data-testid="input-email"
                   className="h-11"
                 />
-                {errors.username && (
-                  <p className="text-sm text-destructive" data-testid="error-username">
-                    {errors.username.message}
+                {errors.email && (
+                  <p className="text-sm text-destructive" data-testid="error-email">
+                    {errors.email.message}
                   </p>
                 )}
               </div>

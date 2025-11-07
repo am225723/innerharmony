@@ -24,7 +24,13 @@ export default function Login() {
         throw new Error(data.error || "Login failed");
       }
       
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (data.session) {
+        localStorage.setItem("supabase_session", JSON.stringify(data.session));
+      }
+      
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
       
       toast({
         title: "Welcome back!",
