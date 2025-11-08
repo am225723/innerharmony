@@ -59,13 +59,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (data.user) {
-        await storage.createUser({
-          id: data.user.id,
-          email: data.user.email!,
-          username: data.user.email!.split('@')[0],
-          role: role as "therapist" | "client",
-          displayName,
-        });
+        // Check if user already exists in database (legacy users created before Supabase)
+        const existingUser = await storage.getUserByEmail(data.user.email!);
+        
+        if (existingUser) {
+          // Link existing user to Supabase by updating supabaseAuthId
+          await storage.updateUser(existingUser.id, {
+            supabaseAuthId: data.user.id,
+            role: role as "therapist" | "client",
+            displayName,
+          });
+        } else {
+          // Create new user with Supabase ID
+          await storage.createUser({
+            id: data.user.id,
+            supabaseAuthId: data.user.id,
+            email: data.user.email!,
+            username: data.user.email!.split('@')[0],
+            role: role as "therapist" | "client",
+            displayName,
+          });
+        }
       }
       
       res.json({ 

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const users = pgTable("IFS_users", {
   id: varchar("id").primaryKey(),
+  supabaseAuthId: varchar("supabase_auth_id").unique(),
   email: text("email").notNull().unique(),
   username: text("username"),
   role: text("role", { enum: ["therapist", "client"] }).notNull().default("client"),

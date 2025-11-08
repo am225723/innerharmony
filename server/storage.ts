@@ -46,6 +46,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(role?: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   getSessionsByUserId(userId: string): Promise<Session[]>;
   getSession(id: string): Promise<Session | undefined>;
@@ -185,6 +186,15 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id, createdAt: new Date() };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+    
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   async getSessionsByUserId(userId: string): Promise<Session[]> {
@@ -416,6 +426,15 @@ export class DatabaseStorage implements IStorage {
     const [user] = await this.db
       .insert(schema.users)
       .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await this.db
+      .update(schema.users)
+      .set(updates)
+      .where(eq(schema.users.id, id))
       .returning();
     return user;
   }

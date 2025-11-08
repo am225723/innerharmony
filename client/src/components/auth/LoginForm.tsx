@@ -133,10 +133,8 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
 
             <div className="mt-4 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link href="/signup">
-                <a className="text-primary hover:underline font-medium" data-testid="link-signup">
-                  Create account
-                </a>
+              <Link href="/signup" className="text-primary hover:underline font-medium" data-testid="link-signup">
+                Create account
               </Link>
             </div>
           </CardContent>
