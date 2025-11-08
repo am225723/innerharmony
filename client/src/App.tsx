@@ -5,9 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/hooks/use-theme";
 import Login from "@/pages/Login";
+import Signup from "@/pages/Signup";
 import Dashboard from "@/pages/Dashboard";
 import TherapistDashboard from "@/pages/TherapistDashboard";
 import ClientProfile from "@/pages/ClientProfile";
+import ClientManagement from "@/pages/ClientManagement";
 import PartsMapping from "@/pages/PartsMapping";
 import SixFs from "@/pages/SixFs";
 import LetterWrite from "@/pages/LetterWrite";
@@ -59,7 +61,9 @@ function Router() {
     <Switch>
       <Route path="/" component={() => <Redirect to="/login" />} />
       <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
       <Route path="/dashboard" component={RoleBasedDashboard} />
+      <Route path="/client-management" component={ClientManagement} />
       <Route path="/clients/:clientId" component={ClientProfile} />
       <Route path="/parts-mapping" component={PartsMapping} />
       <Route path="/six-fs" component={SixFs} />

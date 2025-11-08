@@ -1,28 +1,36 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema, type LoginCredentials } from "@shared/schema";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Shield, Sparkles } from "lucide-react";
+import { Heart, Shield, Sparkles, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 
-interface LoginFormProps {
-  onSubmit: (credentials: LoginCredentials, role: "therapist" | "client") => Promise<void>;
+const signupSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  displayName: z.string().min(2, "Display name must be at least 2 characters"),
+});
+
+type SignupFormData = z.infer<typeof signupSchema>;
+
+interface SignupFormProps {
+  onSubmit: (data: SignupFormData, role: "therapist" | "client") => Promise<void>;
   isLoading?: boolean;
 }
 
-export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
+export function SignupForm({ onSubmit, isLoading }: SignupFormProps) {
   const [selectedRole, setSelectedRole] = useState<"therapist" | "client">("client");
   
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginCredentials>({
-    resolver: zodResolver(loginSchema),
+  const { register, handleSubmit, formState: { errors } } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
   });
 
-  const handleFormSubmit = async (data: LoginCredentials) => {
+  const handleFormSubmit = async (data: SignupFormData) => {
     await onSubmit(data, selectedRole);
   };
 
@@ -37,7 +45,7 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
             Compassionate Path
           </h1>
           <p className="text-muted-foreground text-lg">
-            Your journey to inner harmony begins here
+            Begin your healing journey today
           </p>
         </div>
 
@@ -66,9 +74,9 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
 
         <Card className="shadow-lg border-card-border">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-display">Welcome back</CardTitle>
+            <CardTitle className="text-2xl font-display">Create your account</CardTitle>
             <CardDescription className="flex items-center gap-2">
-              Sign in as {selectedRole}
+              Sign up as {selectedRole}
               <Badge variant="secondary" className="gap-1">
                 <Sparkles className="w-3 h-3" />
                 {selectedRole === "therapist" ? "Guide" : "Seeker"}
@@ -82,7 +90,7 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email address"
+                  placeholder="your.email@example.com"
                   {...register("email")}
                   data-testid="input-email"
                   className="h-11"
@@ -95,11 +103,28 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="displayName">Full Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="Your full name"
+                  {...register("displayName")}
+                  data-testid="input-display-name"
+                  className="h-11"
+                />
+                {errors.displayName && (
+                  <p className="text-sm text-destructive" data-testid="error-display-name">
+                    {errors.displayName.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Create a strong password (min 8 characters)"
                   {...register("password")}
                   data-testid="input-password"
                   className="h-11"
@@ -115,27 +140,27 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
                 type="submit"
                 className="w-full h-11 gap-2"
                 disabled={isLoading}
-                data-testid="button-login"
+                data-testid="button-signup"
               >
                 {isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                    Signing in...
+                    Creating account...
                   </>
                 ) : (
                   <>
-                    <Shield className="w-4 h-4" />
-                    Sign In
+                    <UserPlus className="w-4 h-4" />
+                    Create Account
                   </>
                 )}
               </Button>
             </form>
 
             <div className="mt-4 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/signup">
-                <a className="text-primary hover:underline font-medium" data-testid="link-signup">
-                  Create account
+              Already have an account?{" "}
+              <Link href="/login">
+                <a className="text-primary hover:underline font-medium" data-testid="link-login">
+                  Sign in
                 </a>
               </Link>
             </div>
@@ -143,9 +168,9 @@ export function LoginForm({ onSubmit, isLoading }: LoginFormProps) {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          "The curious paradox is that when I accept myself just as I am, then I can change." 
+          "The privilege of a lifetime is to become who you truly are."
           <br />
-          <span className="text-xs">— Carl Rogers</span>
+          <span className="text-xs">— Carl Jung</span>
         </p>
       </div>
     </div>
