@@ -464,6 +464,7 @@ export const loginSchema = z.object({
 export const loginCredentialsSchema = z.object({
   email: z.string().email("Valid email is required"),
   password: z.string().min(1, "Password is required"),
+  role: z.enum(["therapist", "client"]),
 });
 
 // Types

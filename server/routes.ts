@@ -137,63 +137,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin Routes - Therapist only
-  app.post("/api/admin/users", requireAuth, async (req: AuthRequest, res: Response) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-      
-      const requestingUser = await storage.getUser(req.user.id);
-      if (!requestingUser || requestingUser.role !== "therapist") {
-        return res.status(403).json({ error: "Forbidden - therapist access only" });
-      }
-
-      const { email, password, role, displayName } = req.body;
-      
-      if (!email || !password || !role || !displayName) {
-        return res.status(400).json({ error: "Email, password, role, and display name are required" });
-      }
-
-      const { supabaseAdmin } = await import("./supabase");
-      
-      if (!supabaseAdmin) {
-        return res.status(503).json({ error: "Admin service not configured" });
-      }
-
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: {
-          role,
-          display_name: displayName,
-        },
-      });
-      
-      if (error) {
-        return res.status(400).json({ error: error.message });
-      }
-      
-      if (data.user) {
-        const newUser = await storage.createUser({
-          id: data.user.id,
-          email: data.user.email!,
-          username: data.user.email!.split('@')[0],
-          role: role as "therapist" | "client",
-          displayName,
-        });
-        
-        res.status(201).json({ user: newUser });
-      } else {
-        res.status(500).json({ error: "Failed to create user" });
-      }
-    } catch (error) {
-      console.error('Admin user creation error:', error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
   // User Routes - Protected
   app.get("/api/users", requireAuth, async (req: AuthRequest, res: Response) => {
     try {
